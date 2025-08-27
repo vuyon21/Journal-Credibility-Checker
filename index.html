@@ -1,0 +1,513 @@
+index.html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UFS Journal Credibility Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#1a5f7a;--accent:#4a89dc}
+  *{box-sizing:border-box}
+  body{font-family:'Roboto',sans-serif;margin:0;background:linear-gradient(135deg,#f5f7fa,#e4e8f0);padding:20px;color:#222}
+  .container{max-width:960px;margin:0 auto}
+  header{background:#fff;border-radius:10px;padding:20px;margin-bottom:18px;box-shadow:0 4px 10px rgba(0,0,0,.06);text-align:center}
+  h1{color:var(--brand);margin:0 0 6px}
+  .card{background:#fff;padding:22px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.05)}
+  .search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type="text"]{flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
+  button{padding:11px 14px;border-radius:8px;border:0;cursor:pointer;background:var(--brand);color:#fff;font-weight:600}
+  .small-btn{padding:9px 12px;background:var(--accent)}
+  .button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  pre#journal-report{display:none;white-space:pre-wrap;background:#f8f9fa;padding:18px;border-radius:8px;border:1px solid #e4e8f0;margin-top:14px;max-height:420px;overflow:auto;font-family:monospace}
+  .removed-list{display:none;margin-top:14px;background:#fff;border-radius:8px;padding:12px;border:1px solid #eee;max-height:320px;overflow:auto}
+  .status{margin-top:10px;text-align:center;display:none;padding:10px;border-radius:8px}
+  .status.loading{display:none;background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
+  .status.error{background:#ffebee;color:#c0392b;border:1px solid #f8d7da}
+  .recommendation{display:none;margin-top:12px;padding:12px;border-radius:8px;font-weight:600}
+  .recommendation.recommended{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+  .recommendation.verify{background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
+  .recommendation.not-recommended{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+  .footer{margin-top:22px;text-align:center;color:#555}
+  .autocomplete{position:relative}
+  #autocomplete-results{position:absolute;left:0;right:0;top:100%;z-index:1000;background:#fff;border:1px solid #ddd;border-top:0;border-radius:0 0 8px 8px;display:none;max-height:200px;overflow:auto}
+  .autocomplete-item{padding:10px;border-bottom:1px solid #f1f1f1;cursor:pointer}
+  .autocomplete-item:hover{background:#f0f8ff}
+  @media (max-width:640px){.search-row{flex-direction:column}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>UFS Journal Credibility Checker</h1>
+      <div style="color:#666">Search local accreditation lists + live lookups (Crossref, PubMed retractions, OpenPolicyFinder)</div>
+    </header>
+
+    <div class="card">
+      <div class="search-row">
+        <div class="autocomplete" style="flex:1;position:relative">
+          <input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)">
+          <div id="autocomplete-results"></div>
+        </div>
+        <button id="check-btn">Check</button>
+        <button id="copy-report-btn" class="small-btn">📋 Copy Report</button>
+        <button id="download-report-btn" class="small-btn">💾 Download Report</button>
+      </div>
+
+      <div class="button-row">
+        <button id="show-removed-btn" style="background:#6c757d">🗑️ Show Removed Journals</button>
+        <button id="download-removed-btn" style="background:#da4453">📥 Download Removed List</button>
+      </div>
+
+      <div class="status loading" id="loading-message">Loading journal data...</div>
+      <div class="status error" id="error-message"></div>
+
+      <pre id="journal-report"></pre>
+      <div id="recommendation" class="recommendation"></div>
+
+      <div id="removed-journals-list" class="removed-list"></div>
+
+      <div class="footer">If you have troubles, open DevTools (F12) → Console and paste any error here and I’ll help.</div>
+    </div>
+  </div>
+
+<script>
+/* ===================== CONFIG - update filenames if yours differ ===================== */
+/* repository base for raw files (we use your repo) */
+const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
+
+/* filenames currently in your repo - change keys to actual filenames if necessary */
+const FILENAMES = {
+  dhet: 'DHET_2025.txt',                // <-- update if actual file name differs
+  doaj: 'DOAJ_2025.txt',
+  ibss: 'IBSS_2025.txt',
+  norwegian: 'NORWEGIAN_2025.txt',
+  other: 'OTHER INDEXED JOURNALS_2025.txt',
+  scielo: 'SCIELO SA_2025.txt',
+  scopus: 'SCOPUS_2025.txt',
+  wos: 'WOS_2025.txt',
+  removed: 'JOURNALS REMOVED IN PAST YEARS.txt'
+};
+/* =================================================================================== */
+
+/* ---------- helpers & DOM ---------- */
+const $ = id => document.getElementById(id);
+const journalQuery = $('journal-query');
+const checkBtn = $('check-btn');
+const autocompleteResults = $('autocomplete-results');
+const copyReportBtn = $('copy-report-btn');
+const downloadReportBtn = $('download-report-btn');
+const showRemovedBtn = $('show-removed-btn');
+const downloadRemovedBtn = $('download-removed-btn');
+const journalReport = $('journal-report');
+const removedJournalsList = $('removed-journals-list');
+const loadingMessage = $('loading-message');
+const errorMessage = $('error-message');
+const recommendation = $('recommendation');
+
+let journalLists = {
+  dhet: [], doaj: [], ibss: [], norwegian: [], other: [], scielo: [], scopus: [], wos: [], removed: []
+};
+
+/* show/hide helpers */
+function showLoading(msg){ loadingMessage.textContent = msg; loadingMessage.style.display = 'block'; }
+function hideLoading(){ loadingMessage.style.display = 'none'; }
+function showError(msg){ errorMessage.textContent = msg; errorMessage.style.display = 'block'; setTimeout(()=>errorMessage.style.display='none',7000); }
+function showSuccessMsg(msg){ /* little toast substitute */ console.log('SUCCESS:', msg) }
+
+/* ===================== CSV/TXT PARSER (robust) ===================== */
+/* parse CSV line with quotes handling; returns array of fields */
+function parseCSVLine(line) {
+  const fields = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"' && line[i-1] !== '\\') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (ch === ',' && !inQuotes) {
+      fields.push(cur.trim());
+      cur = '';
+      continue;
+    }
+    cur += ch;
+  }
+  fields.push(cur.trim());
+  return fields;
+}
+
+/* parse the whole text file into rows (ignores empty lines) */
+function parseTextToRows(text){
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  // If first line looks like header, keep it but we will skip when mapping
+  return lines;
+}
+
+/* map a data row to journal object trying to pick right columns:
+   supports multiple column counts; columns:
+   0: title
+   1: print ISSN
+   2: online ISSN
+   3: date of last review/accreditation (optional)
+   4: international accreditation (optional)
+   5: frequency (optional)
+   6+: ignore
+*/
+function rowToJournalObj(rowLine){
+  // try to split by comma with quotes handling
+  let parts = parseCSVLine(rowLine);
+
+  // If the file is tab-delimited, fallback:
+  if (parts.length === 1 && rowLine.includes('\t')) parts = rowLine.split('\t').map(s => s.trim());
+
+  // Trim surrounding quotes
+  parts = parts.map(p => p.replace(/^"|"$/g,'').replace(/^'|'$/g,''));  
+
+  const title = parts[0] || '';
+  const printIssn = (parts[1] || '').replace(/\s/g,'');
+  const onlineIssn = (parts[2] || '').replace(/\s/g,'');
+  const lastReview = parts[3] || '';
+  const intlAcc = parts[4] || '';
+  const frequency = parts[5] || '';
+  return {
+    title: title,
+    titleNorm: normalizeTitle(title),
+    printIssn: printIssn,
+    onlineIssn: onlineIssn,
+    lastReview: lastReview,
+    intlAccreditation: intlAcc,
+    frequency: frequency
+  };
+}
+
+/* Normalise title for matching */
+function normalizeTitle(t){
+  return (t||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+/* check if string looks like ISSN */
+function isISSN(s){
+  if(!s) return false;
+  return /\b\d{4}-?\d{3}[\dXx]\b/.test(s);
+}
+
+/* helper to build raw file URL */
+function rawUrlFor(filename){
+  return RAW_BASE + encodeURIComponent(filename);
+}
+
+/* ===================== LOAD ALL TXT FILES FROM REPO ===================== */
+async function loadAllLists(){
+  showLoading('Loading journal lists from GitHub...');
+  const entries = Object.entries(FILENAMES);
+  for (const [key, fname] of entries){
+    const url = rawUrlFor(fname);
+    try {
+      const res = await fetch(url);
+      if(!res.ok) {
+        console.warn('Failed to fetch', key, url, res.status);
+        journalLists[key] = [];
+        continue;
+      }
+      const text = await res.text();
+      const rows = parseTextToRows(text);
+      // map rows -> objects
+      const mapped = rows.map(rowToJournalObj).filter(j => (j.title && (isISSN(j.printIssn) || isISSN(j.onlineIssn))));
+      // If file uses header, it's okay; filter removes lines without ISSN
+      journalLists[key] = mapped;
+      console.log(`Loaded ${mapped.length} entries for ${key}`);
+    } catch (err) {
+      console.error('Error loading list', key, err);
+      journalLists[key] = [];
+    }
+  }
+  hideLoading();
+}
+loadAllLists();
+
+/* ===================== AUTOCOMPLETE ===================== */
+journalQuery.addEventListener('input', function(){
+  const q = normalizeTitle(this.value || '');
+  autocompleteResults.innerHTML = '';
+  autocompleteResults.style.display = 'none';
+  if (q.length < 2) return;
+  const suggestions = [];
+  for (const list of Object.values(journalLists)){
+    for (const j of list){
+      if (j.titleNorm.includes(q) && !suggestions.includes(j.title)){
+        suggestions.push(j.title);
+        if (suggestions.length >= 8) break;
+      }
+    }
+    if (suggestions.length >= 8) break;
+  }
+  if (suggestions.length){
+    for (const t of suggestions){
+      const div = document.createElement('div');
+      div.className = 'autocomplete-item';
+      div.textContent = t;
+      div.addEventListener('click', ()=>{
+        journalQuery.value = t;
+        autocompleteResults.style.display = 'none';
+        runCheck();
+      });
+      autocompleteResults.appendChild(div);
+    }
+    autocompleteResults.style.display = 'block';
+  }
+});
+document.addEventListener('click', e => {
+  if (!autocompleteResults.contains(e.target) && e.target !== journalQuery) autocompleteResults.style.display = 'none';
+});
+
+/* ===================== SEARCH LOGIC ===================== */
+function findOffline(query){
+  const qNorm = normalizeTitle(query);
+  const issnQuery = isISSN(query) ? query.replace('-','').toLowerCase() : null;
+  const flags = {};
+  let firstHit = null;
+
+  for (const [key, arr] of Object.entries(journalLists)){
+    if (key === 'removed') continue;
+    flags[key] = false;
+    for (const j of arr){
+      // check ISSN match if query is ISSN
+      if (issnQuery){
+        const p = (j.printIssn || '').replace(/-/g,'').toLowerCase();
+        const o = (j.onlineIssn || '').replace(/-/g,'').toLowerCase();
+        if (p === issnQuery || o === issnQuery){
+          flags[key] = true;
+          if (!firstHit) firstHit = j;
+          break;
+        }
+      }
+      // exact normalized title
+      if (j.titleNorm === qNorm){
+        flags[key] = true;
+        if (!firstHit) firstHit = j;
+        break;
+      }
+      // partial includes
+      if (j.titleNorm.includes(qNorm) && qNorm.length > 2){
+        flags[key] = true;
+        if (!firstHit) firstHit = j;
+        break;
+      }
+    }
+  }
+  return { flags, sample: firstHit };
+}
+
+function checkRemovedList(query){
+  const qNorm = normalizeTitle(query);
+  return journalLists.removed.some(j => j.titleNorm === qNorm || j.titleNorm.includes(qNorm));
+}
+
+/* ===================== LIVE LOOKUPS (Crossref, PubMed, OpenPolicyFinder) ===================== */
+/* Each function tries its best and returns an object (or null) */
+async function liveCrossrefByISSN(issn){
+  try {
+    const id = issn.replace('-','');
+    const url = `https://api.crossref.org/journals/${encodeURIComponent(id)}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const json = await r.json();
+    if (json?.message) {
+      return {
+        publisher: json.message.publisher || null,
+        issn: (json.message.ISSN || []).join(' / '),
+        license: json.message.license?.[0]?.URL || null
+      };
+    }
+    return null;
+  } catch(e){ console.warn('Crossref by ISSN failed', e); return null; }
+}
+
+async function liveCrossrefByTitle(title){
+  try {
+    const url = `https://api.crossref.org/works?query.title=${encodeURIComponent(title)}&rows=3`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const json = await r.json();
+    if (json?.message?.items?.length){
+      const item = json.message.items[0];
+      return {
+        title: item.title?.[0] || null,
+        publisher: item.publisher || null,
+        issn: (item['container-title'] && item['ISSN']) ? (item['ISSN']||[]).join(' / ') : (item.ISSN||[]).join(' / '),
+        url: item.URL || null
+      };
+    }
+    return null;
+  } catch(e){ console.warn('Crossref by title failed', e); return null; }
+}
+
+async function livePubMedRetractions(query){
+  try{
+    // query journal title for retractions: NOTE NCBI E-utilities may have CORS limitations
+    const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}[journal]+AND+retracted+publication&retmode=json&retmax=5`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const json = await r.json();
+    const ids = json?.esearchresult?.idlist || [];
+    return ids;
+  } catch(e){ console.warn('PubMed retraction check failed', e); return null; }
+}
+
+async function liveOpenPolicyFinder(title){
+  try {
+    // Jisc Open Policy Finder does have an API; endpoint or CORS might block requests from client.
+    // We'll attempt a simple search endpoint - if blocked, this will fail gracefully.
+    const url = `https://openpolicyfinder.jisc.ac.uk/api/search?q=${encodeURIComponent(title)}&size=3`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const json = await r.json();
+    return json;
+  } catch(e){ console.warn('OpenPolicyFinder lookup failed', e); return null; }
+}
+
+/* ===================== BUILD REPORT & UI ===================== */
+function buildReportText(query, offlineHit, isRemoved, live) {
+  const f = offlineHit.flags || {};
+  const hit = offlineHit.sample || null;
+  const title = hit?.title || query;
+  const issnLocal = hit ? [hit.printIssn, hit.onlineIssn].filter(Boolean).join(' / ') : (live?.issn || 'N/A');
+  const publisher = hit?.publisher || live?.publisher || 'Unknown';
+  const lastReview = hit?.lastReview || (hit?.lastReview === '' ? 'N/A' : 'N/A');
+
+  let recText = '⚠️ Verify manually: Not found in key lists';
+  let recClass = 'verify';
+  if (f.dhet || f.scopus || f.wos) { recText = '✅ Recommended: Appears in credible indexes'; recClass = 'recommended'; }
+  else if (f.doaj || f.ibss || f.scielo) { recText = '⚠️ Verify manually: Appears in some indexes but not major ones'; recClass = 'verify'; }
+  if (isRemoved) { recText = '❌ Not recommended: Appears on removed list'; recClass = 'not-recommended'; }
+
+  const retractionText = live?.retractions && live.retractions.length ? live.retractions.map(i=>'PubMed ID: '+i).join('\n') : 'None found (or lookup failed)';
+
+  const parts = [
+`🔍 Search: ${query}`,
+``,
+`📘 Journal: ${title}`,
+`📋 ISSN: ${issnLocal || 'N/A'}`,
+`🏢 Publisher: ${publisher}`,
+`🗓️ Last review/accreditation: ${lastReview || 'N/A'}`,
+`🔖 Live license / policy: ${live?.license || live?.policy || 'N/A'}`,
+``,
+`================== LOCAL ACCREDITATION LISTS ==================`,
+`DHET:     ${f.dhet ? '✅ Found' : '❌ Not found'}`,
+`DOAJ:     ${f.doaj ? '✅ Found' : '❌ Not found'}`,
+`IBSS:     ${f.ibss ? '✅ Found' : '❌ Not found'}`,
+`Norwegian:${f.norwegian ? '✅ Found' : '❌ Not found'}`,
+`Other:    ${f.other ? '✅ Found' : '❌ Not found'}`,
+`SciELO:   ${f.scielo ? '✅ Found' : '❌ Not found'}`,
+`Scopus:   ${f.scopus ? '✅ Found' : '❌ Not found'}`,
+`WOS:      ${f.wos ? '✅ Found' : '❌ Not found'}`,
+``,
+`================== REMOVED / RETRACTED ==================`,
+`Offline removed: ${isRemoved ? '❌ Found' : '✅ Not on removed list'}`,
+`Recent retractions (PubMed): ${retractionText}`,
+``,
+`================== RECOMMENDATION ==================`,
+`${recText}`
+  ];
+  return { text: parts.join('\n'), recClass, recText };
+}
+
+function showReport(text, recClass, recText){
+  journalReport.textContent = text;
+  journalReport.style.display = 'block';
+  recommendation.textContent = recText;
+  recommendation.className = 'recommendation ' + recClass;
+  recommendation.style.display = 'block';
+}
+
+/* ===================== MAIN CHECK FLOW ===================== */
+async function runCheck(){
+  const query = journalQuery.value.trim();
+  if (!query) { showError('Enter a journal title or ISSN'); return; }
+  showLoading('Checking (offline + live lookups)...');
+
+  // offline
+  const offline = findOffline(query);
+  const isRemoved = checkRemovedList(query);
+
+  // live: try ISSN first if query is ISSN
+  let liveData = { publisher: null, issn: null, license: null, retractions: [] };
+  try {
+    if (isISSN(query)) {
+      const cr = await liveCrossrefByISSN(query);
+      if (cr) {
+        liveData.publisher = cr.publisher;
+        liveData.issn = cr.issn;
+        liveData.license = cr.license;
+      }
+    } else {
+      // search by title
+      const crt = await liveCrossrefByTitle(query);
+      if (crt) {
+        liveData.publisher = crt.publisher || null;
+        liveData.issn = crt.issn || null;
+        liveData.license = null;
+      }
+      // attempt OpenPolicyFinder (graceful)
+      const opf = await liveOpenPolicyFinder(query);
+      if (opf) liveData.policy = JSON.stringify(opf).slice(0,200) + (opf.length>200? '...':'');
+    }
+    // PubMed retraction check (attempt)
+    const rets = await livePubMedRetractions(query);
+    if (Array.isArray(rets)) liveData.retractions = rets;
+  } catch(e){
+    console.warn('Live lookups partially failed', e);
+  }
+
+  const rep = buildReportText(query, offline, isRemoved, liveData);
+  hideLoading();
+  showReport(rep.text, rep.recClass, rep.recText);
+}
+
+/* ===================== BUTTONS & UI ============== */
+checkBtn.addEventListener('click', runCheck);
+journalQuery.addEventListener('keypress', e => { if (e.key === 'Enter') runCheck(); });
+
+copyReportBtn.addEventListener('click', () => {
+  if (journalReport.style.display !== 'block') { showError('No report to copy'); return; }
+  navigator.clipboard.writeText(journalReport.textContent).then(()=>showSuccessMsg('Copied')).catch(err=>showError('Copy failed: '+err));
+});
+
+downloadReportBtn.addEventListener('click', () => {
+  if (journalReport.style.display !== 'block') { showError('No report to download'); return; }
+  const blob = new Blob([journalReport.textContent], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'journal_report.txt'; a.click();
+  URL.revokeObjectURL(url);
+  showSuccessMsg('Downloaded');
+});
+
+showRemovedBtn.addEventListener('click', () => {
+  if (removedJournalsList.style.display === 'block') {
+    removedJournalsList.style.display = 'none';
+    showRemovedBtn.textContent = '🗑️ Show Removed Journals';
+    return;
+  }
+  removedJournalsList.innerHTML = '<h4>Journals Removed in Past Years</h4>';
+  for (const j of journalLists.removed || []) {
+    const d = document.createElement('div'); d.textContent = j.title || j.titleNorm || '(no title)'; d.style.padding='4px';
+    removedJournalsList.appendChild(d);
+  }
+  removedJournalsList.style.display = 'block';
+  showRemovedBtn.textContent = '🗑️ Hide Removed Journals';
+});
+
+downloadRemovedBtn.addEventListener('click', () => {
+  if (!journalLists.removed || journalLists.removed.length === 0) { showError('No removed journals data'); return; }
+  const text = journalLists.removed.map(j => j.title || j.titleNorm).join('\n');
+  const blob = new Blob([text], {type:'text/plain'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'ufs_removed_journals.txt'; a.click(); URL.revokeObjectURL(url);
+});
+
+/* nice dev helper: expose journalLists to console for inspection */
+window.__journalLists = journalLists;
+console.log('Journal Cred Checker initialized. journalLists available as window.__journalLists');
+</script>
+</body>
+</html>
