@@ -14,11 +14,11 @@ header{background:#fff;border-radius:10px;padding:20px;margin-bottom:18px;box-sh
 h1{color:var(--brand);margin:0 0 6px}
 .card{background:#fff;padding:22px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.05)}
 .search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-input[type="text"]{flex:2;padding:14px;border:1px solid #ddd;border-radius:8px;font-size:16px}
+input[type="text"]{flex:2;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
 button{padding:11px 14px;border-radius:8px;border:0;cursor:pointer;background:var(--brand);color:#fff;font-weight:600}
 .small-btn{padding:9px 12px;background:var(--accent)}
 .button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-pre#journal-report{display:none;white-space:pre-wrap;background:#f8f9fa;padding:18px;border-radius:8px;border:1px solid #e4e8f0;margin-top:14px;max-height:480px;overflow:auto;font-family:monospace}
+pre#journal-report{display:none;white-space:pre-wrap;background:#f8f9fa;padding:18px;border-radius:8px;border:1px solid #e4e8f0;margin-top:14px;max-height:420px;overflow:auto;font-family:monospace}
 .removed-list{display:none;margin-top:14px;background:#fff;border-radius:8px;padding:12px;border:1px solid #eee;max-height:320px;overflow:auto;color:var(--removed)}
 .status{margin-top:10px;text-align:center;display:none;padding:10px;border-radius:8px}
 .status.loading{display:none;background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
@@ -28,7 +28,7 @@ pre#journal-report{display:none;white-space:pre-wrap;background:#f8f9fa;padding:
 .recommendation.verify{background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
 .recommendation.not-recommended{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
 .footer{margin-top:22px;text-align:center;color:#555}
-.autocomplete{position:relative;flex:1}
+.autocomplete{position:relative}
 #autocomplete-results{position:absolute;left:0;right:0;top:100%;z-index:1000;background:#fff;border:1px solid #ddd;border-top:0;border-radius:0 0 8px 8px;display:none;max-height:200px;overflow:auto}
 .autocomplete-item{padding:10px;border-bottom:1px solid #f1f1f1;cursor:pointer}
 .autocomplete-item:hover{background:#f0f8ff}
@@ -37,40 +37,74 @@ pre#journal-report{display:none;white-space:pre-wrap;background:#f8f9fa;padding:
 </head>
 <body>
 <div class="container">
-<header>
-<h1>UFS Journal Credibility Checker</h1>
-<div style="color:#666">Evaluates journal credibility via accredited lists and real-time lookups from trusted sources</div>
-</header>
+  <header>
+    <h1>UFS Journal Credibility Checker</h1>
+    <div style="color:#666">Evaluates journal credibility via accredited lists and real-time lookups from trusted sources</div>
+  </header>
 
-<div class="card">
-<div class="search-row">
-<div class="autocomplete">
-<input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)">
-<div id="autocomplete-results"></div>
-</div>
-<button id="check-btn">Check</button>
-<button id="copy-report-btn" class="small-btn">📋 Copy Report</button>
-<button id="download-report-btn" class="small-btn">💾 Download Report</button>
-</div>
+  <div class="card">
+    <div class="search-row">
+      <div class="autocomplete" style="flex:1;position:relative">
+        <input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)">
+        <div id="autocomplete-results"></div>
+      </div>
+      <button id="check-btn">Check</button>
+      <button id="copy-report-btn" class="small-btn">📋 Copy Report</button>
+      <button id="download-report-btn" class="small-btn">💾 Download Report</button>
+    </div>
 
-<div class="button-row">
-<button id="show-removed-btn" style="background:#6c757d">🗑️ Show Removed Journals</button>
-<button id="copy-removed-btn" style="background:#da4453">📋 Copy Removed Journals</button>
-</div>
+    <div class="button-row">
+      <button id="show-removed-btn" style="background:var(--removed)">🗑️ Show Removed Journals</button>
+      <button id="copy-removed-btn" style="background:var(--accent)">📋 Copy Removed Journals</button>
+    </div>
 
-<div class="status loading" id="loading-message">Loading journal data...</div>
-<div class="status error" id="error-message"></div>
+    <div class="status loading" id="loading-message">Loading journal data...</div>
+    <div class="status error" id="error-message"></div>
 
-<pre id="journal-report"></pre>
-<div id="recommendation" class="recommendation"></div>
+    <pre id="journal-report"></pre>
+    <div id="recommendation" class="recommendation"></div>
 
-<div id="removed-journals-list" class="removed-list"></div>
+    <div id="removed-journals-list" class="removed-list"></div>
 
-<div class="footer">Note: While this journal meets credibility checks, researchers should ensure alignment with their field of study and intended audience before submission.</div>
-</div>
+    <div class="footer">Note: Always confirm scope match with your discipline before submission.</div>
+  </div>
 </div>
 
 <script>
+/* ===================== CONFIG ===================== */
+const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
+const FILENAMES = {
+  dhet: 'DHET_2025.txt',
+  doaj: 'DOAJ_2025.txt',
+  ibss: 'IBSS_2025.txt',
+  norwegian: 'NORWEGIAN_2025.txt',
+  other: 'OTHER INDEXED JOURNALS_2025.txt',
+  scielo: 'SCIELO SA_2025.txt',
+  scopus: 'SCOPUS_2025.txt',
+  wos: 'WOS_2025.txt',
+  removed: 'JOURNALS REMOVED IN PAST YEARS.txt',
+  // Transformative agreements will be added like
+  // transform_wiley: 'WILEY_2025.csv', etc.
+};
+const TRANSFORMATIVE_FILES = [
+  'WILEY_2025.csv',
+  'The Company of Biologists_2025.csv',
+  'Taylir & Francis_2025.csv',
+  'Springer_2025.csv',
+  'ScienceDirect (Elsevier)_2025.csv',
+  'SAGE Publishing_2025.csv',
+  'Royal Society_2025.csv',
+  'Royal Society of Chemistry Platinum_2025.csv',
+  'Oxford University Press Journals_2025.csv',
+  'IOPscienceExtra_2025.csv',
+  'Emerald_2025.csv',
+  'Cambridge University Press (CUP)_2025.csv',
+  'Bentham Science Publisherst_2025.csv',
+  'Association for Computing Machinery (ACM)_2025.csv',
+  'American Institute of Physics (AIP)_2025.csv',
+  'American Chemicals Society(ACS)_2025.csv'
+];
+
 const $ = id => document.getElementById(id);
 const journalQuery = $('journal-query');
 const checkBtn = $('check-btn');
@@ -85,135 +119,156 @@ const loadingMessage = $('loading-message');
 const errorMessage = $('error-message');
 const recommendation = $('recommendation');
 
-const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
+let journalLists = { dhet:[], doaj:[], ibss:[], norwegian:[], other:[], scielo:[], scopus:[], wos:[], removed:[] };
+let transformativeList = [];
 
-const FILENAMES = {
-dhet:'DHET_2025.txt', doaj:'DOAJ_2025.txt', ibss:'IBSS_2025.txt', norwegian:'NORWEGIAN_2025.txt',
-other:'OTHER INDEXED JOURNALS_2025.txt', scielo:'SCIELO SA_2025.txt', scopus:'SCOPUS_2025.txt', wos:'WOS_2025.txt',
-removed:'JOURNALS REMOVED IN PAST YEARS.txt',
-transformative:['WILEY_2025.csv','The Company of Biologists_2025.csv','Taylir & Francis_2025.csv','Springer_2025.csv','ScienceDirect (Elsevier)_2025.csv','SAGE Publishing_2025.csv','Royal Society_2025.csv','Royal Society of Chemistry Platinum_2025.csv','Oxford University Press Journals_2025.csv','IOPscienceExtra_2025.csv','Emerald_2025.csv','Cambridge University Press (CUP)_2025.csv','Bentham Science Publisherst_2025.csv','Association for Computing Machinery (ACM)_2025.csv','American Institute of Physics (AIP)_2025.csv','American Chemicals Society(ACS)_2025.csv']
-};
+/* ===================== UTILITIES ===================== */
+function showLoading(msg){ loadingMessage.textContent=msg; loadingMessage.style.display='block'; }
+function hideLoading(){ loadingMessage.style.display='none'; }
+function showError(msg){ errorMessage.textContent=msg; errorMessage.style.display='block'; setTimeout(()=>errorMessage.style.display='none',7000); }
+function showSuccessMsg(msg){ console.log('SUCCESS:', msg) }
+function normalizeTitle(t){ return (t||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim(); }
+function isISSN(s){ if(!s) return false; return /\b\d{4}-?\d{3}[\dXx]\b/.test(s); }
+function rawUrlFor(fname){ return RAW_BASE + encodeURIComponent(fname); }
 
-let journalLists = {dhet:[], doaj:[], ibss:[], norwegian:[], other:[], scielo:[], scopus:[], wos:[], removed:[], transformative:[]};
-
-/* ===================== LOAD TXT/CSV FILES ===================== */
-async function fetchTextFile(fname){const res=await fetch(RAW_BASE+encodeURIComponent(fname));if(!res.ok)return[];const text=await res.text();return text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);}
+/* ===================== LOAD LISTS ===================== */
 async function loadAllLists(){
-showLoading('Loading journal lists from GitHub...');
-for(const key of ['dhet','doaj','ibss','norwegian','other','scielo','scopus','wos','removed']){
-journalLists[key]=await fetchTextFile(FILENAMES[key]);
-}
-for(const tf of FILENAMES.transformative){
-let lines = await fetchTextFile(tf);
-lines = lines.map(l=>{
-const parts=l.split(',');return {title:parts[0],issn:parts[1],transformative:parts[2],duration:parts[3]||'',notes:parts[4]||'',publisher:parts[0]};});
-journalLists.transformative.push(...lines);
-}
-hideLoading();
+  showLoading('Loading journal lists...');
+  for(const [key,fname] of Object.entries(FILENAMES)){
+    try{
+      const res = await fetch(rawUrlFor(fname));
+      const text = await res.text();
+      journalLists[key] = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>({title:l,titleNorm:normalizeTitle(l)}));
+    }catch(e){ console.warn('Failed loading',fname,e); journalLists[key]=[]; }
+  }
+  // load transformative agreements
+  transformativeList = [];
+  for(const fname of TRANSFORMATIVE_FILES){
+    try{
+      const res = await fetch(rawUrlFor(fname));
+      const text = await res.text();
+      const rows = text.split(/\r?\n/).filter(Boolean);
+      for(const row of rows){
+        const parts = row.split('|').map(p=>p.trim());
+        transformativeList.push({
+          journal: parts[0],
+          issn: parts[1],
+          transformative: parts[2],
+          notes: parts[3] || '',
+          duration: parts[4] || ''
+        });
+      }
+    }catch(e){ console.warn('Failed loading transformative file',fname,e); }
+  }
+  hideLoading();
 }
 loadAllLists();
 
 /* ===================== AUTOCOMPLETE ===================== */
-journalQuery.addEventListener('input',function(){
-const q=journalQuery.value.toLowerCase().trim();autocompleteResults.innerHTML='';autocompleteResults.style.display='none';
-if(q.length<2)return;
-let suggestions=[];
-for(const list of Object.values(journalLists)){
-if(!Array.isArray(list))continue;
-for(const j of list){
-if(j.toLowerCase?.()?.includes(q) && !suggestions.includes(j.title||j))suggestions.push(j.title||j);if(suggestions.length>=8)break;
-}
-if(suggestions.length>=8)break;
-}
-if(suggestions.length){
-for(const t of suggestions){
-const div=document.createElement('div');div.className='autocomplete-item';div.textContent=t;
-div.addEventListener('click',()=>{journalQuery.value=t;autocompleteResults.style.display='none';runCheck();});autocompleteResults.appendChild(div);
-}
-autocompleteResults.style.display='block';
-}
+journalQuery.addEventListener('input', function(){
+  const q = normalizeTitle(this.value||'');
+  autocompleteResults.innerHTML=''; autocompleteResults.style.display='none';
+  if(q.length<2) return;
+  const suggestions=[];
+  for(const list of Object.values(journalLists)){
+    for(const j of list){
+      if(j.titleNorm.includes(q) && !suggestions.includes(j.title)){
+        suggestions.push(j.title);
+        if(suggestions.length>=8) break;
+      }
+    }
+    if(suggestions.length>=8) break;
+  }
+  if(suggestions.length){
+    for(const t of suggestions){
+      const div=document.createElement('div');
+      div.className='autocomplete-item'; div.textContent=t;
+      div.addEventListener('click',()=>{ journalQuery.value=t; autocompleteResults.style.display='none'; runCheck(); });
+      autocompleteResults.appendChild(div);
+    }
+    autocompleteResults.style.display='block';
+  }
 });
-document.addEventListener('click',e=>{if(!autocompleteResults.contains(e.target)&&e.target!==journalQuery)autocompleteResults.style.display='none';});
+document.addEventListener('click',e=>{ if(!autocompleteResults.contains(e.target)&&e.target!==journalQuery) autocompleteResults.style.display='none'; });
 
-/* ===================== SEARCH/REPORT LOGIC ===================== */
+/* ===================== SEARCH ===================== */
 function findOffline(query){
-const q=query.toLowerCase().trim();
-const flags={};let firstHit=null;
-for(const [key,arr] of Object.entries(journalLists)){
-if(key==='removed')continue;
-flags[key]=arr.some(j=>{
-let t=j.title||j;if(typeof t==='string')t=t.toLowerCase();
-if(t===q||t.includes(q)){if(!firstHit)firstHit=j;return true}return false;
-});
+  const qNorm=normalizeTitle(query);
+  const issnQuery=isISSN(query)?query.replace('-','').toLowerCase():null;
+  let flags={}, sample=null;
+  for(const [key,arr] of Object.entries(journalLists)){
+    if(key==='removed') continue;
+    flags[key]=false;
+    for(const j of arr){
+      if(issnQuery && normalizeTitle(j.issn||'')===issnQuery){ flags[key]=true; sample=j; break; }
+      if(j.titleNorm===qNorm || (j.titleNorm.includes(qNorm)&&qNorm.length>2)){ flags[key]=true; sample=j; break; }
+    }
+  }
+  return {flags,sample};
 }
-return {flags,sample:firstHit};
+function checkRemovedList(query){ const qNorm=normalizeTitle(query); return journalLists.removed.some(j=>j.titleNorm===qNorm||j.titleNorm.includes(qNorm)); }
+
+/* ===================== BUILD REPORT ===================== */
+function buildReportText(query,offlineHit,isRemoved){
+  const f=offlineHit.flags||{}, hit=offlineHit.sample||{title:query};
+  let recText='⚠️ Note: This journal was not found in any of the key lists. Kindly confirm its credibility with your Faculty Librarian.';
+  let recClass='not-recommended';
+  if(f.dhet||f.scopus||f.wos){ recText='✅ Recommended: Appears in major credible indexes'; recClass='recommended'; }
+  else if(f.doaj||f.ibss||f.scielo){ recText='⚠️ Verify manually: Appears in some indexes but not major ones'; recClass='verify'; }
+  if(isRemoved){ recText='❌ Not recommended: Appears on removed list'; recClass='not-recommended'; }
+  // check transformative
+  let trans = transformativeList.filter(t=>normalizeTitle(t.journal)===normalizeTitle(hit.title));
+  let transText = trans.length? `Transformative: Yes (${trans.map(t=>t.journal).join(', ')})\n`:'Transformative: No';
+  if(trans.length && trans[0].duration){ transText+=`\nDuration: ${trans[0].duration} - ${trans[0].notes}`; }
+  // build full text
+  const parts=[
+`🔍 Search: ${query}`,
+`📘 Journal: ${hit.title}`,
+`📋 ISSN: ${hit.issn||'N/A'}`,
+`🏢 Publisher: ${hit.publisher||'Unknown'}`,
+`💡 ${transText}`,
+``,
+`================== LOCAL ACCREDITATION LISTS ==================`,
+`DHET:     ${f.dhet?'✅ Found':'❌ Not found'}`,
+`DOAJ:     ${f.doaj?'✅ Found':'❌ Not found'}`,
+`IBSS:     ${f.ibss?'✅ Found':'❌ Not found'}`,
+`Norwegian:${f.norwegian?'✅ Found':'❌ Not found'}`,
+`Other:    ${f.other?'✅ Found':'❌ Not found'}`,
+`SciELO:   ${f.scielo?'✅ Found':'❌ Not found'}`,
+`Scopus:   ${f.scopus?'✅ Found':'❌ Not found'}`,
+`WOS:      ${f.wos?'✅ Found':'❌ Not found'}`,
+``,
+`================== RECOMMENDATION ==================`,
+`${recText}`
+  ];
+  return {text:parts.join('\n'),recClass,recText};
 }
-function checkRemoved(query){
-const q=query.toLowerCase().trim();
-return journalLists.removed.some(j=>j.toLowerCase().includes(q));
+function showReport(text,recClass,recText){
+  journalReport.textContent=text; journalReport.style.display='block';
+  recommendation.textContent=recText; recommendation.className='recommendation '+recClass; recommendation.style.display='block';
 }
 
-async function fetchCrossRef(titleOrISSN){try{const url=`https://api.crossref.org/journals/${encodeURIComponent(titleOrISSN)}`;const r=await fetch(url);if(!r.ok)return null;const json=await r.json();return json.message||null;}catch(e){return null;}}
-async function fetchPubMed(title){try{const url=`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(title)}[journal]&retmode=json&retmax=1`;const r=await fetch(url);if(!r.ok)return 0;const j=await r.json();return j.esearchresult.count||0;}catch(e){return 0;}}
-async function fetchOpenAlex(title){try{const url=`https://api.openalex.org/works?filter=venue.title:${encodeURIComponent(title)}&per-page=1`;const r=await fetch(url);if(!r.ok)return null;const j=await r.json();return j.meta?.count||null;}catch(e){return null;}}
-
-function buildReport(query,offline,isRemoved,crossref,pubmedCount,openalex){
-const f=offline.flags;const hit=offline.sample;const title=hit?.title||query;
-let recText='⚠️ Note: While this journal meets credibility checks, researchers should ensure alignment with their field of study and intended audience before submission.';let recClass='verify';
-if(f.dhet||f.scopus||f.wos)recText='✅ Recommended: Appears in major credible indexes and transformative agreements if applicable.';recClass='recommended';
-if(isRemoved){recText='❌ Not recommended: Appears on removed list';recClass='not-recommended';}
-let transformativeStr='None';
-const matchingTA=journalLists.transformative.filter(t=>t.title.toLowerCase()===title.toLowerCase()&&t.transformative.toLowerCase()==='yes');
-if(matchingTA.length)transformativeStr='Yes ('+matchingTA.map(t=>t.publisher).join(', ')+')';
-let durationStr=matchingTA.map(t=>t.duration+' - '+t.notes).join('; ');
-return `
-🔍 Search: ${query}
-
-📘 Journal: ${title}
-📋 ISSN: ${hit?.issn||'N/A'}
-🏢 Publisher: ${hit?.publisher||crossref?.publisher||'Unknown'}
-📝 License: ${crossref?.license?`[${crossref.license}](${crossref.license})`:'N/A'}
-PubMed: ${pubmedCount} article(s)
-OpenAlex: ${openalex||'N/A'}
-
-================== LOCAL ACCREDITATION LISTS ==================
-DHET:           ${f.dhet?'✅ Found':'❌ Not found'}
-DOAJ:           ${f.doaj?'✅ Found':'❌ Not found'}
-IBSS:           ${f.ibss?'✅ Found':'❌ Not found'}
-Norwegian:      ${f.norwegian?'✅ Found':'❌ Not found'}
-Other Indexed:  ${f.other?'✅ Found':'❌ Not found'}
-SciELO SA:      ${f.scielo?'✅ Found':'❌ Not found'}
-Scopus:         ${f.scopus?'✅ Found':'❌ Not found'}
-WOS:            ${f.wos?'✅ Found':'❌ Not found'}
-
-================== TRANSFORMATIVE AGREEMENTS ==================
-Transformative: ${transformativeStr}
-${durationStr ? 'Duration: '+durationStr : ''}
-
-================== RECOMMENDATION ==================
-${recText}
-`;}
-
-function showReportText(text,recClass){journalReport.textContent=text;journalReport.style.display='block';recommendation.textContent=recClass;recommendation.className='recommendation '+recClass;recommendation.style.display='block';}
-
-/* ===================== MAIN CHECK ===================== */
+/* ===================== RUN ===================== */
 async function runCheck(){
-const query=journalQuery.value.trim();if(!query){errorMessage.textContent='Enter a journal title or ISSN';errorMessage.style.display='block';return;}
-loadingMessage.style.display='block';journalReport.style.display='none';recommendation.style.display='none';
-const offline=findOffline(query);const isRemoved=checkRemoved(query);
-const crossref=await fetchCrossRef(query);const pubmedCount=await fetchPubMed(query);const openalex=await fetchOpenAlex(query);
-loadingMessage.style.display='none';
-const rep=buildReport(query,offline,isRemoved,crossref,pubmedCount,openalex);
-showReportText(rep,'recommended');
+  const query=journalQuery.value.trim();
+  if(!query){ showError('Enter a journal title or ISSN'); return; }
+  showLoading('Checking journal...');
+  const offline=findOffline(query);
+  const isRemoved=checkRemovedList(query);
+  const rep=buildReportText(query,offline,isRemoved);
+  hideLoading(); showReport(rep.text,rep.recClass,rep.recText);
 }
 
 /* ===================== BUTTONS ===================== */
 checkBtn.addEventListener('click',runCheck);
-journalQuery.addEventListener('keypress',e=>{if(e.key==='Enter')runCheck();});
-copyReportBtn.addEventListener('click',()=>{navigator.clipboard.writeText(journalReport.textContent);alert('Report copied to clipboard');});
-downloadReportBtn.addEventListener('click',()=>{const blob=new Blob([journalReport.textContent],{type:'text/plain'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='journal_report.txt';a.click();URL.revokeObjectURL(url);});
-showRemovedBtn.addEventListener('click',()=>{removedJournalsList.style.display=removedJournalsList.style.display==='block'?'none':'block';removedJournalsList.innerHTML='';if(removedJournalsList.style.display==='block'){for(const j of journalLists.removed){const d=document.createElement('div');d.textContent=j;removedJournalsList.appendChild(d);}}});
-copyRemovedBtn.addEventListener('click',()=>{navigator.clipboard.writeText(journalLists.removed.join('\n'));alert('Removed journals copied to clipboard');});
+journalQuery.addEventListener('keypress',e=>{ if(e.key==='Enter') runCheck(); });
+copyReportBtn.addEventListener('click',()=>{ navigator.clipboard.writeText(journalReport.textContent).then(()=>showSuccessMsg('Report copied to clipboard')); });
+downloadReportBtn.addEventListener('click',()=>{
+  const blob = new Blob([journalReport.textContent], {type: "text/plain;charset=utf-8"});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='journal-report.txt'; a.click(); URL.revokeObjectURL(a.href);
+});
+showRemovedBtn.addEventListener('click',()=>{ removedJournalsList.innerHTML=journalLists.removed.map(j=>j.title).join('\n'); removedJournalsList.style.display='block'; });
+copyRemovedBtn.addEventListener('click',()=>{ navigator.clipboard.writeText(journalLists.removed.map(j=>j.title).join('\n')).then(()=>showSuccessMsg('Removed journals copied to clipboard')); });
 
 </script>
 </body>
