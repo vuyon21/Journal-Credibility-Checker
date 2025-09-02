@@ -1,74 +1,15 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UFS Journal Credibility Checker</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --brand:#0F204B;           /* deep blue */
-    --accent:#A71930;          /* red */
-    --muted:#8B8D8E;           /* grey for removed */
-    --bg:#f5f7fb;
-  }
-  *{box-sizing:border-box}
-  body{font-family:'Roboto',sans-serif;margin:0;background:linear-gradient(135deg,#f7f9fc,#e9edf5);padding:20px;color:#222}
-  .container{max-width:1100px;margin:0 auto}
-  header{background:#fff;border-radius:16px;padding:22px 24px;margin-bottom:18px;box-shadow:0 8px 24px rgba(0,0,0,.06);text-align:center}
-  h1{color:var(--brand);margin:0 0 6px;font-size:28px}
-  .sub{color:#5a6270}
-  .card{background:#fff;padding:22px;border-radius:16px;box-shadow:0 10px 26px rgba(0,0,0,.06)}
-  .search-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .search-wrap{flex:1;position:relative}
-  input[type="text"]{
-    width:100%;
-    padding:14px 16px;
-    border:2px solid #d7dbe6;
-    border-radius:12px;
-    font-size:16px;
-    outline:none;
-  }
-  input[type="text"]:focus{border-color:var(--brand)}
-  button{
-    padding:12px 14px;border-radius:10px;border:0;cursor:pointer;
-    background:var(--brand);color:#fff;font-weight:600
-  }
-  .btn-accent{background:var(--accent)}
-  .btn-muted{background:var(--muted)}
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-  .status{margin-top:12px;text-align:center;display:none;padding:10px;border-radius:10px}
-  .status.loading{background:#fff3cd;color:#856404;border:1px solid #ffeaa7;display:none}
-  .status.error{background:#ffebee;color:#c0392b;border:1px solid #f8d7da}
-  .rec{display:none;margin-top:14px;padding:12px;border-radius:12px;font-weight:700;border:1px solid transparent}
-  .rec.recommended{background:#eaf7ef;color:#145c2e;border-color:#c8ead3}
-  .rec.verify{background:#fff7e5;color:#7a4b00;border-color:#ffe5b3}
-  .rec.not-recommended{background:#fde8ea;color:#7c1b27;border-color:#f4c2c8}
-  pre#report{
-    display:none;white-space:pre-wrap;background:#fbfcfe;padding:18px;border-radius:12px;border:1px solid #e6e9f2;
-    margin-top:12px;max-height:540px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UFS Journal Credibility Checker</title>
 
-  /* Autocomplete */
-  #autocomplete-results{
-    position:absolute;left:0;right:0;top:100%;z-index:1000;background:#fff;border:1px solid #ddd;border-top:0;
-    border-radius:0 0 12px 12px;display:none;max-height:260px;overflow:auto
-  }
-  .autocomplete-item{padding:10px;border-bottom:1px solid #f1f1f1;cursor:pointer}
-  .autocomplete-item:hover{background:#f0f8ff}
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-  /* Removed list panel */
-  .removed-panel{margin-top:16px;border:1px solid #e6e9f2;border-radius:12px;display:none}
-  .removed-head{
-    background:#f4f5f8;color:#222;padding:10px 12px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between
-  }
-  .removed-body{padding:12px;max-height:380px;overflow:auto;background:#fff}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid #eef1f6;padding:8px 10px;text-align:left;font-size:14px}
-  th{background:#f9fafc;color:#333;position:sticky;top:0}
-  .footer{margin-top:18px;text-align:center;color:#555}
-  @media (max-width:640px){.search-row{flex-direction:column}}
-</style>
+  <!-- External stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
@@ -110,11 +51,11 @@
         </div>
       </div>
 
-      <div class="footer" style="color:#8B8D8E">Colours: brand <b>#0F204B</b>, accent <b>#A71930</b>, removed <b>#8B8D8E</b></div>
+      <div class="footer">© 2025 - UFS</div>
     </div>
   </div>
 
-  <!-- Attach the JS file -->
+  <!-- External script -->
   <script src="script.js"></script>
 </body>
 </html>
