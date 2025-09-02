@@ -450,7 +450,7 @@ async function doSearch(rawQuery){
 
   // Accreditation Checks
   const accRows = [
-    ['Found in Accredited Lists', accreditedHits.length ? 'Yes' : 'No'],
+    ['Found in 2025 Accredited Lists', accreditedHits.length ? 'Yes' : 'No'],
     ['Removed 4rm Accredited List', removedMatch ? 'Yes (historical)' : 'No']
   ];
   parts.push({ title: 'Accreditation Checks', rows: accRows });
