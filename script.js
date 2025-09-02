@@ -516,7 +516,7 @@ function buildReport(query, offlineHit, taHit, flags, removed, live) {
   parts.push('=== Recommendation ===');
   parts.push(recText);
   parts.push('');
-  parts.push('⚠️ Note: While this journal meets credibility checks, researchers should ensure alignment with their field of study and intended audience before submission.');
+  parts.push('⚠️ Note: Always ensure your manuscript aligns with the journal’s disciplinary scope and audience prior to submission, especially if the journal meets established credibility standards.');
 
   return { text: parts.join('\n'), recText, recClass };
 }
