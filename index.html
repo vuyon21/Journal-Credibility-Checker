@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>UFS Journal Credibility Checker</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UFS Journal Credibility Checker</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
@@ -13,33 +13,37 @@
       <div class="sub">Evaluates journal credibility via accredited lists and real-time lookups from trusted sources</div>
     </header>
 
-    <div class="card">
+    <main class="card">
       <div class="search-row">
         <div class="search-wrap">
           <input id="q" type="text" placeholder="Enter journal title or ISSN (e.g., Nature or 0028-0836)">
-          <div id="autocomplete-results"></div>
+          <div id="autocomplete-results" role="listbox" aria-label="autocomplete"></div>
         </div>
         <button id="btn-search">Search / Check</button>
       </div>
 
       <div class="toolbar">
         <button id="btn-copy" class="btn-accent">📋 Copy Report</button>
-        <button id="btn-download">💾 Download Report</button>
+        <button id="btn-download" class="btn-accent">💾 Download Report</button>
         <button id="btn-show-removed" class="btn-muted">🚨 Show Removed 4rm Accredited List</button>
         <button id="btn-copy-removed" class="btn-muted">📄 Copy Removed List</button>
       </div>
 
-      <div class="status loading" id="loading">Loading journal data…</div>
-      <div class="status error" id="error"></div>
+      <div class="status loading" id="loading" aria-live="polite">Loading journal data…</div>
+      <div class="status error" id="error" aria-live="assertive"></div>
 
-      <div id="report-wrapper">
-        <table id="report-table"></table>
+      <div id="rec" class="rec" role="status" aria-live="polite"></div>
+
+      <!-- REPORT OUTPUT: table sections inserted here -->
+      <div id="report-container">
+        <!-- report tables will be injected here -->
       </div>
 
-      <div id="removed-panel" class="removed-panel">
+      <!-- Removed list panel -->
+      <div id="removed-panel" class="removed-panel" aria-hidden="true">
         <div class="removed-head">
           <strong>Removed 4rm Accredited List (historical)</strong>
-          <span>Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
+          <span style="color:var(--muted)">Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
         </div>
         <div class="removed-body">
           <div id="removed-table-wrap"></div>
@@ -47,7 +51,7 @@
       </div>
 
       <div class="footer">© 2025 - UFS</div>
-    </div>
+    </main>
   </div>
 
   <script src="script.js"></script>
