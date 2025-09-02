@@ -1,1 +1,142 @@
+/* ================== GLOBAL ================== */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    margin: 20px;
+}
+
+h1, h2, h3 {
+    font-family: Arial, sans-serif;
+}
+
+/* ================== REPORT TABLE ================== */
+#report-container {
+    margin-top: 20px;
+    overflow-x: auto;
+}
+
+#report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+}
+
+#report-table th {
+    background-color: #4CAF50;
+    color: white;
+    position: sticky;
+    top: 0;
+    padding: 8px;
+    text-align: left;
+    z-index: 2;
+}
+
+#report-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    vertical-align: top;
+}
+
+#report-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+#report-table tr:hover {
+    background-color: #e6f7ff;
+}
+
+/* Section headers inside table */
+#report-table th[colspan="2"] {
+    background-color: #2196F3;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+/* ================== REMOVED PANEL ================== */
+#removed-panel {
+    margin-top: 20px;
+    display: none;
+    overflow-x: auto;
+}
+
+#removed-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+}
+
+#removed-table-wrap th {
+    background-color: #f44336;
+    color: white;
+    position: sticky;
+    top: 0;
+    padding: 8px;
+    text-align: left;
+    z-index: 2;
+}
+
+#removed-table-wrap td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#removed-table-wrap tr:nth-child(even) {
+    background-color: #f9d6d5;
+}
+
+#removed-table-wrap tr:hover {
+    background-color: #ffe5e3;
+}
+
+/* ================== BUTTONS ================== */
+button {
+    font-family: Arial, sans-serif;
+    padding: 6px 12px;
+    margin: 4px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+/* ================== MESSAGES ================== */
+#loading, #error {
+    margin: 10px 0;
+    font-weight: bold;
+}
+#loading { color: #333; }
+#error { color: #d9534f; }
+
+/* ================== AUTOCOMPLETE ================== */
+#autocomplete-results {
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    position: absolute;
+    background-color: #fff;
+    z-index: 10;
+    width: 300px;
+}
+
+.autocomplete-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.autocomplete-item:hover {
+    background-color: #e6f7ff;
+}
+
+/* ================== REC MESSAGE ================== */
+.rec {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.rec.recommended { color: green; }
+.rec.verify { color: #ff9800; }
+.rec.not-recommended { color: red; }
 
