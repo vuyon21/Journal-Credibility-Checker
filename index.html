@@ -1,10 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>UFS Journal Credibility Checker</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
@@ -24,7 +24,7 @@
 
       <div class="toolbar">
         <button id="btn-copy" class="btn-accent">📋 Copy Report</button>
-        <button id="btn-download" class="btn-accent">💾 Download Report</button>
+        <button id="btn-download">💾 Download Report</button>
         <button id="btn-show-removed" class="btn-muted">🚨 Show Removed 4rm Accredited List</button>
         <button id="btn-copy-removed" class="btn-muted">📄 Copy Removed List</button>
       </div>
@@ -32,13 +32,14 @@
       <div class="status loading" id="loading">Loading journal data…</div>
       <div class="status error" id="error"></div>
 
-      <div id="rec" class="rec"></div>
-      <div id="report" class="report-table"></div>
+      <div id="report-wrapper">
+        <table id="report-table"></table>
+      </div>
 
       <div id="removed-panel" class="removed-panel">
         <div class="removed-head">
           <strong>Removed 4rm Accredited List (historical)</strong>
-          <span style="color:#8B8D8E">Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
+          <span>Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
         </div>
         <div class="removed-body">
           <div id="removed-table-wrap"></div>
