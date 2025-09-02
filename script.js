@@ -516,7 +516,8 @@ function buildReport(query, offlineHit, taHit, flags, removed, live) {
   parts.push('=== Recommendation ===');
   parts.push(recText);
   parts.push('');
-  parts.push('⚠️ Note: Always ensure your manuscript aligns with the journal’s disciplinary scope and audience prior to submission, especially if the journal meets established credibility standards.');
+  parts.push('⚠️ Note: Alwaysd ensure alignment with the journal’s disciplinary scope before submission. Consult your institution’s librarian to confirm eligibility under the Transformative Agreement.
+');
 
   return { text: parts.join('\n'), recText, recClass };
 }
