@@ -418,7 +418,7 @@ async function doSearch(rawQuery){
   let recText = '';
   let recClass = '';
   if(removedMatch){
-    recText = '❌ Not recommended: Appears on the "Removed 4rm Accredited List".';
+    recText = '❌ Not recommended: Appears on the "Removed 4rm Previous Accredited List".';
     recClass = 'removed';
   } else if(accreditedHits.length && taHits.length){
     recText = '✅ Recommended: Appears in credible indexes and is included in a Transformative Agreement.';
