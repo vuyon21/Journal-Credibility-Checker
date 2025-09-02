@@ -427,7 +427,7 @@ async function doSearch(rawQuery){
     recText = '✅ Recommended: Appears in credible indexes.';
     recClass = 'accredited';
   } else if(taHits.length){
-    recText = '⚠️ Verify: Not in our accredited lists, but appears in a Transformative Agreement.';
+    recText = '⚠️ Verify: Not in 2025 accredited lists, but appears in a Transformative Agreement.';
     recClass = 'transformative';
   } else {
     recText = '⚠️ Not found in key lists — please verify with your Faculty Librarian.';
