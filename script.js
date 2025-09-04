@@ -120,7 +120,12 @@ function mapAccreditedRow(cols, header, sourceFileName) {
       const reviewMatch = publisher.match(/\b(Reviewed|Review|Accredited)?\s*(19|20)\d{2}\b/);
       if (reviewMatch) {
         lastReview = reviewMatch[0];
-        publisher = publisher.replace(reviewMatch[0], '').replace(/\s*[,-]\s*$/, '').replace(/\s+/g, ' ').trim();
+        // Clean up the publisher field by removing the review info and any trailing punctuation
+        publisher = publisher.replace(reviewMatch[0], '')
+                            .replace(/\s*[,-]\s*$/, '')
+                            .replace(/\s*\.\s*$/, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
       }
     }
   } else if (sourceFileName.includes('DHET')) {
@@ -129,9 +134,90 @@ function mapAccreditedRow(cols, header, sourceFileName) {
       const reviewMatch = publisher.match(/\b(Reviewed|Review|Accredited)?\s*(19|20)\d{2}\b/);
       if (reviewMatch) {
         lastReview = reviewMatch[0];
-        publisher = publisher.replace(reviewMatch[0], '').replace(/\s*[,-]\s*$/, '').replace(/\s+/g, ' ').trim();
+        // Clean up the publisher field
+        publisher = publisher.replace(reviewMatch[0], '')
+                            .replace(/\s*[,-]\s*$/, '')
+                            .replace(/\s*\.\s*$/, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
       }
     }
+  }
+
+  // Additional cleanup for publisher field - remove any remaining review-like text
+  if (publisher) {
+    // Remove common review phrases that might be stuck in publisher field
+    const reviewPhrases = [
+      'Reviewed', 'Review', 'Accredited', 'Accreditation', 
+      'Date of Last Review', 'Last Review', 'Year Reviewed'
+    ];
+    
+    reviewPhrases.forEach(phrase => {
+      if (publisher.includes(phrase) && lastReview) {
+        publisher = publisher.replace(new RegExp(phrase, 'gi'), '')
+                            .replace(/\s*[,-]\s*$/, '')
+                            .replace(/\s*\.\s*$/, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+      }
+    });
+    
+    // Remove years that might be stuck in publisher field
+    if (publisher.match(/\b(19|20)\d{2}\b/) && lastReview) {
+      publisher = publisher.replace(/\b(19|20)\d{2}\b/, '')
+                          .replace(/\s*[,-]\s*$/, '')
+                          .replace(/\s*\.\s*$/, '')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+    }
+  }
+
+  // If publisher is empty after cleanup, try to find it in other columns
+  if (!publisher || publisher.length < 3) {
+    // Look for publisher information in other columns
+    for (let i = 0; i < cols.length; i++) {
+      const colValue = cols[i] || '';
+      if (colValue.toLowerCase().includes('publisher') || 
+          colValue.toLowerCase().includes('publish') || 
+          colValue.toLowerCase().includes('press') ||
+          colValue.toLowerCase().includes('publications') ||
+          colValue.toLowerCase().includes('publishers') ||
+          colValue.toLowerCase().includes('publishing') ||
+          colValue.toLowerCase().includes('ltd') ||
+          colValue.toLowerCase().includes('inc') ||
+          colValue.toLowerCase().includes('llc') ||
+          colValue.toLowerCase().includes('gmbh') ||
+          colValue.toLowerCase().includes('verlag') ||
+          colValue.toLowerCase().includes('editorial') ||
+          colValue.toLowerCase().includes('editions') ||
+          colValue.toLowerCase().includes('books') ||
+          colValue.toLowerCase().includes('academic') ||
+          colValue.toLowerCase().includes('university') ||
+          colValue.toLowerCase().includes('college') ||
+          colValue.toLowerCase().includes('institute') ||
+          colValue.toLowerCase().includes('association') ||
+          colValue.toLowerCase().includes('society') ||
+          colValue.toLowerCase().includes('foundation') ||
+          colValue.toLowerCase().includes('group')) {
+        
+        // Make sure it's not a header column and contains actual publisher-like text
+        if (!h[i] || !h[i].toLowerCase().includes('publisher')) {
+          publisher = colValue;
+          break;
+        }
+      }
+    }
+  }
+
+  // Final cleanup of publisher field
+  if (publisher) {
+    publisher = publisher
+      .replace(/\b(Reviewed|Review|Accredited|Accreditation|Date of Last Review|Last Review|Year Reviewed)\b/gi, '')
+      .replace(/\b(19|20)\d{2}\b/, '')
+      .replace(/\s*[,-]\s*$/, '')
+      .replace(/\s*\.\s*$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   // Determine the source list type from filename
