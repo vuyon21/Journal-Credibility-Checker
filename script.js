@@ -292,6 +292,9 @@ async function init(){
     await Promise.all([loadAccredited(), loadRemoved(), loadTransformative()]);
     // Setup autocomplete now that datasets are in memory
     setupAutocomplete();
+    
+    // Setup event listeners after everything is loaded
+    setupEventListeners();
   }catch(e){
     console.error('Initialization error', e);
     errBox.style.display = 'block'; errBox.textContent = 'Failed to load CSV datasets. Check RAW_BASE and filenames.';
@@ -299,10 +302,75 @@ async function init(){
     loadingEl.style.display = 'none';
   }
 }
-init();
+
+// Initialize when DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+  init();
+});
+
+/* ================== Setup Event Listeners ================== */
+function setupEventListeners() {
+  // Search button click event
+  if (btnSearch) {
+    btnSearch.addEventListener('click', () => doSearch());
+  }
+  
+  // Enter key in search input
+  if (qInput) {
+    qInput.addEventListener('keypress', (e) => { 
+      if(e.key === 'Enter') doSearch(); 
+    });
+  }
+  
+  // Copy report button
+  if (btnCopy) {
+    btnCopy.addEventListener('click', () => {
+      if(!reportContainer.innerText.trim()){ alert('No report to copy'); return; }
+      navigator.clipboard.writeText(reportContainer.innerText).then(()=>alert('Report copied to clipboard')).catch(()=>alert('Copy failed'));
+    });
+  }
+  
+  // Download report button
+  if (btnDownload) {
+    btnDownload.addEventListener('click', () => {
+      if(!reportContainer.innerText.trim()){ alert('No report to download'); return; }
+      const blob = new Blob([reportContainer.innerText], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'journal_report.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  }
+  
+  // Show removed list button
+  if (btnShowRemoved) {
+    btnShowRemoved.addEventListener('click', () => {
+      if(removedPanel.style.display === 'block'){ 
+        removedPanel.style.display='none'; 
+        btnShowRemoved.textContent='🚨 Show Removed 4rm Accredited List'; 
+      } else {
+        renderRemovedTable();
+        removedPanel.style.display = 'block';
+        btnShowRemoved.textContent='🚨 Hide Removed 4rm Accredited List';
+      }
+    });
+  }
+  
+  // Copy removed list button
+  if (btnCopyRemoved) {
+    btnCopyRemoved.addEventListener('click', () => {
+      if(!removedList.length){ alert('No removed list data to copy'); return; }
+      const lines = removedList.map(r => `${r.title}, ${r.issn}, ${r.reason}, ${r.review}, ${r.publisher}`);
+      navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Removed list copied to clipboard'));
+    });
+  }
+}
 
 /* ================== Autocomplete ================== */
 function setupAutocomplete(){
+  if (!qInput || !acWrap) return;
+  
   qInput.addEventListener('input', ()=>{
     const q = normalize(qInput.value);
     acWrap.innerHTML = '';
@@ -401,11 +469,20 @@ async function fetchPubMedCount(title){
 /* ================== Search and report builder ================== */
 async function doSearch(rawQuery){
   const query = (typeof rawQuery === 'string' && rawQuery.trim()) ? rawQuery.trim() : qInput.value.trim();
-  if(!query) { errBox.style.display='block'; errBox.textContent = 'Enter a journal title or ISSN'; setTimeout(()=>errBox.style.display='none',4000); return; }
+  if(!query) { 
+    if (errBox) {
+      errBox.style.display='block'; 
+      errBox.textContent = 'Enter a journal title or ISSN'; 
+      setTimeout(()=>{
+        if (errBox) errBox.style.display='none';
+      },4000); 
+    }
+    return; 
+  }
 
   // UI reset
-  loadingEl.style.display = 'block';
-  reportContainer.innerHTML = '';
+  if (loadingEl) loadingEl.style.display = 'block';
+  if (reportContainer) reportContainer.innerHTML = '';
 
   // offline matches
   const norm = normalize(query);
@@ -472,7 +549,7 @@ async function doSearch(rawQuery){
   const parts = [];
 
   // Journal Identification - FIXED: Use proper publisher info
-  const idTitle = accreditedHits[0]?.title || taHits[0]?.title || qInput.value || query;
+  const idTitle = accreditedHits[0]?.title || taHits[0]?.title || (qInput ? qInput.value : '') || query;
   const idPublisher = accreditedHits[0]?.publisher || taHits[0]?.publisher || live.crossref?.publisher || live.openalex?.publisher || '';
   const idISSN = [accreditedHits[0]?.issn, accreditedHits[0]?.eissn, taHits[0]?.eissn].filter(Boolean).join(' | ');
   const identificationRows = [
@@ -528,89 +605,59 @@ async function doSearch(rawQuery){
   parts.push({ title: 'Live Lookups', rows: liveRows });
 
   // Render parts to DOM
-  reportContainer.innerHTML = '';
-  for(const part of parts){
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    thead.innerHTML = `<tr><th colspan="2">${escapeHtml(part.title)}</th></tr>`;
-    table.appendChild(thead);
-    const tbody = document.createElement('tbody');
-    for(const r of part.rows){
-      const tr = document.createElement('tr');
-      const tdKey = document.createElement('td');
-      tdKey.style.width = '30%';
-      tdKey.textContent = r[0];
-      const tdVal = document.createElement('td');
-      tdVal.innerHTML = r[1] || '';
-      tr.appendChild(tdKey);
-      tr.appendChild(tdVal);
-      tbody.appendChild(tr);
+  if (reportContainer) {
+    reportContainer.innerHTML = '';
+    for(const part of parts){
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr><th colspan="2">${escapeHtml(part.title)}</th></tr>`;
+      table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      for(const r of part.rows){
+        const tr = document.createElement('tr');
+        const tdKey = document.createElement('td');
+        tdKey.style.width = '30%';
+        tdKey.textContent = r[0];
+        const tdVal = document.createElement('td');
+        tdVal.innerHTML = r[1] || '';
+        tr.appendChild(tdKey);
+        tr.appendChild(tdVal);
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      reportContainer.appendChild(table);
     }
-    table.appendChild(tbody);
-    reportContainer.appendChild(table);
+
+    // Add Recommendation as a special section (not in a table)
+    const recContainer = document.createElement('div');
+    recContainer.className = `rec ${recClass}`;
+    recContainer.style.display = 'block';
+    recContainer.style.marginTop = '20px';
+    recContainer.style.padding = '15px';
+    recContainer.style.borderRadius = '8px';
+    recContainer.style.fontWeight = 'bold';
+    recContainer.style.border = '1px solid transparent';
+    recContainer.innerHTML = `<h3 style="margin:0 0 10px 0;">Recommendation</h3><p style="margin:0; font-size:16px;">${recText}</p>`;
+    
+    // Add to the end of the report container
+    reportContainer.appendChild(recContainer);
   }
 
-  // Add Recommendation as a special section (not in a table)
-  const recContainer = document.createElement('div');
-  recContainer.className = `rec ${recClass}`;
-  recContainer.style.display = 'block';
-  recContainer.style.marginTop = '20px';
-  recContainer.style.padding = '15px';
-  recContainer.style.borderRadius = '8px';
-  recContainer.style.fontWeight = 'bold';
-  recContainer.style.border = '1px solid transparent';
-  recContainer.innerHTML = `<h3 style="margin:0 0 10px 0;">Recommendation</h3><p style="margin:0; font-size:16px;">${recText}</p>`;
-  
-  // Add to the end of the report container
-  reportContainer.appendChild(recContainer);
-
-  loadingEl.style.display = 'none';
+  if (loadingEl) loadingEl.style.display = 'none';
 }
 
-/* ================== Autotrigger search on Enter ================== */
-qInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') doSearch(); });
-btnSearch.addEventListener('click', () => doSearch());
-
-/* ================== Removed panel actions ================== */
-btnShowRemoved.addEventListener('click', () => {
-  if(removedPanel.style.display === 'block'){ removedPanel.style.display='none'; btnShowRemoved.textContent='🚨 Show Removed 4rm Accredited List'; }
-  else {
-    renderRemovedTable();
-    removedPanel.style.display = 'block';
-    btnShowRemoved.textContent='🚨 Hide Removed 4rm Accredited List';
-  }
-});
-
 function renderRemovedTable(){
-  if(!removedList.length){ removedTableWrap.innerHTML = '<div style="color:var(--muted)">No removed data loaded.</div>'; return; }
+  if(!removedTableWrap) return;
+  
+  if(!removedList.length){ 
+    removedTableWrap.innerHTML = '<div style="color:var(--muted)">No removed data loaded.</div>'; 
+    return; 
+  }
   let html = '<table><thead><tr><th>Journal Title</th><th>ISSN</th><th>Reason</th><th>Review/Year</th><th>Publisher</th></tr></thead><tbody>';
   html += removedList.map(r => `<tr class="removed"><td>${escapeHtml(r.title)}</td><td>${escapeHtml(r.issn)}</td><td>${escapeHtml(r.reason)}</td><td>${escapeHtml(r.review)}</td><td>${escapeHtml(r.publisher)}</td></tr>`).join('');
   html += '</tbody></table>';
   removedTableWrap.innerHTML = html;
 }
-
-/* Copy removed list to clipboard */
-btnCopyRemoved.addEventListener('click', () => {
-  if(!removedList.length){ alert('No removed list data to copy'); return; }
-  const lines = removedList.map(r => `${r.title}, ${r.issn}, ${r.reason}, ${r.review}, ${r.publisher}`);
-  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Removed list copied to clipboard'));
-});
-
-/* ================== Copy / Download report ================== */
-btnCopy.addEventListener('click', () => {
-  if(!reportContainer.innerText.trim()){ alert('No report to copy'); return; }
-  navigator.clipboard.writeText(reportContainer.innerText).then(()=>alert('Report copied to clipboard')).catch(()=>alert('Copy failed'));
-});
-
-btnDownload.addEventListener('click', () => {
-  if(!reportContainer.innerText.trim()){ alert('No report to download'); return; }
-  const blob = new Blob([reportContainer.innerText], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'journal_report.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
 
 /* ================== EXPORT / DEBUG UTIL ================== */
 /* Optional: expose datasets for debugging */
