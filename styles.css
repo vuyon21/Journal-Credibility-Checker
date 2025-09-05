@@ -1,470 +1,271 @@
-/* ===================== UFS JOURNAL CREDIBILITY CHECKER ===================== */
-/* Author: UFS Research Support | Built for 2025 Accreditation Workflow */
-/* Live version: fetches lists from GitHub, uses OpenAlex & PubMed APIs */
+:root {
+    --primary: #0F204B;
+    --accent: #A71930;
+    --neutral: #8B8D8E;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --light: #f8fafc;
+    --dark: #1e293b;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
-document.addEventListener('DOMContentLoaded', function () {
-    /* ===================== DOM ELEMENTS ===================== */
-    const $ = id => document.getElementById(id);
-    const journalQuery = $('journal-query');
-    const checkBtn = $('check-btn');
-    const autocompleteResults = $('autocomplete-results');
-    const copyReportBtn = $('copy-report-btn');
-    const downloadReportBtn = $('download-report-btn');
-    const showRemovedBtn = $('show-removed-btn');
-    const copyRemovedBtn = $('copy-removed-btn');
-    const journalReport = $('journal-report');
-    const removedJournalsList = $('removed-journals-list');
-    const loadingMessage = $('loading-message');
-    const errorMessage = $('error-message');
-    const recommendation = $('recommendation');
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+}
 
-    /* ===================== CONFIGURATION ===================== */
-    const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
+body {
+    background-color: #f1f5f9;
+    color: var(--dark);
+    line-height: 1.6;
+}
 
-    // Updated list files — now using CSVs where possible
-    const LIST_FILES = {
-        dhet: 'DHET_2025.txt',
-        dhet2: 'DHET_2_2025.csv',  // Replaces "OTHER INDEXED JOURNALS_2025.txt"
-        doaj: 'DOAJ_2025.csv',
-        ibss: 'IBSS_2025.csv',
-        norwegian: 'NORWEGIAN_2025.csv',
-        scielo: 'SCIELO SA_2025.csv',
-        scopus: 'SCOPUS_2025.csv',
-        wos: 'WOS_2025.csv',
-        removed: 'JOURNALS REMOVED IN PAST YEARS.csv'
-    };
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
 
-    const TRANSFORMATIVE_CSVS = [
-        'WILEY_2025.csv',
-        'The Company of Biologists_2025.csv',
-        'Taylir & Francis_2025.csv',
-        'Springer_2025.csv',
-        'ScienceDirect (Elsevier)_2025.csv',
-        'SAGE Publishing_2025.csv',
-        'Royal Society_2025.csv',
-        'Royal Society of Chemistry Platinum_2025.csv',
-        'Oxford University Press Journals_2025.csv',
-        'IOPscienceExtra_2025.csv',
-        'Emerald_2025.csv',
-        'Cambridge University Press (CUP)_2025.csv',
-        'Bentham Science Publisherst_2025.csv',
-        'Association for Computing Machinery (ACM)_2025.csv',
-        'American Institute of Physics (AIP)_2025.csv',
-        'American Chemicals Society(ACS)_2025.csv'
-    ];
+/* Header */
+.header {
+    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    color: white;
+    padding: 25px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: var(--card-shadow);
+}
 
-    const SANLIC_LINKS = {
-        'Cambridge University Press (CUP)': 'https://sanlic.ac.za/cambridge-university-press/',
-        'Bentham Science Publisherst': 'https://sanlic.ac.za/bentham-science-publishers-2/',
-        'Association for Computing Machinery (ACM)': 'https://sanlic.ac.za/association-for-computing-machinery-acm/',
-        'American Institute of Physics (AIP)': 'https://sanlic.ac.za/american-institute-of-physics-2/',
-        'American Chemicals Society(ACS)': 'https://sanlic.ac.za/american-chemical-society-acs/',
-        'Royal Society': 'https://sanlic.ac.za/royal-society/',
-        'Oxford University Press Journals': 'https://sanlic.ac.za/oxford-university-press-journals/',
-        'IOPscienceExtra': 'https://sanlic.ac.za/iopscience-extra/',
-        'Emerald': 'https://sanlic.ac.za/emerald/',
-        'Royal Society of Chemistry Platinum': 'https://sanlic.ac.za/royal-society-of-chemistry/',
-        'WILEY': 'https://sanlic.ac.za/wiley/',
-        'The Company of Biologists': 'https://sanlic.ac.za/the-company-of-biologists/',
-        'Taylir & Francis': 'https://sanlic.ac.za/taylor-francis/',
-        'Springer': 'https://sanlic.ac.za/springer/',
-        'ScienceDirect (Elsevier)': 'https://sanlic.ac.za/sciencedirect-elsevier/',
-        'SAGE Publishing': 'https://sanlic.ac.za/sage-publishing/'
-    };
+.header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-    /* ===================== DATA STORES ===================== */
-    let journalLists = {};
-    let transformativeList = [];
-    let rawRemovedText = null;
+.subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
 
-    /* ===================== HELPER FUNCTIONS ===================== */
-    function normalize(str) {
-        return (str || '').toString().toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+/* Search Container */
+.search-container {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 25px;
+}
+
+.input-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+input[type="text"],
+select {
+    flex: 1;
+    padding: 14px;
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+button:hover {
+    background-color: #1d4ed8;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background-color: var(--neutral);
+}
+.btn-secondary:hover {
+    background-color: #475569;
+}
+
+.btn-success {
+    background-color: var(--success);
+}
+.btn-success:hover {
+    background-color: #0da271;
+}
+
+/* Results */
+.results-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: var(--card-shadow);
+}
+
+.card-full {
+    grid-column: 1 / -1;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--neutral);
+}
+
+.card-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-verified {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.info-item {
+    margin-bottom: 15px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--neutral);
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.info-value {
+    font-size: 1.1rem;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--neutral);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.removed-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.removed-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--neutral);
+    display: flex;
+    justify-content: space-between;
+}
+
+.removed-item:last-child {
+    border-bottom: none;
+}
+
+.journal-title {
+    font-weight: 500;
+}
+
+.journal-issn {
+    color: var(--neutral);
+    font-size: 0.9rem;
+}
+
+.removed-year {
+    background-color: var(--accent);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    color: var(--neutral);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .results-container {
+        grid-template-columns: 1fr;
     }
 
-    function isISSN(s) {
-        return /\b\d{4}-?\d{3}[\dXx]\b/.test(s);
+    .input-group {
+        flex-direction: column;
     }
 
-    function tryParseCSV(text) {
-        const rows = [];
-        let row = []; let field = ''; let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            const c = text[i];
-            if (c === '"') inQuotes = !inQuotes;
-            else if (c === ',' && !inQuotes) { row.push(field); field = ''; }
-            else if ((c === '\n' || c === '\r') && !inQuotes) {
-                row.push(field); rows.push(row); row = []; field = '';
-                if (c === '\r' && text[i+1] === '\n') i++;
-            } else field += c;
-        }
-        if (field || row.length) { row.push(field); rows.push(row); }
-        return rows;
+    .button-group {
+        flex-direction: column;
     }
 
-    function formatDateFriendly(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        return isNaN(d) ? dateStr : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    .info-grid {
+        grid-template-columns: 1fr;
     }
-
-    function escapeHtml(str) {
-        return ('' + (str || '')).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'<','>':'>','"':'&quot;',"'":'&#39;'})[m]);
-    }
-
-    function copyToClipboard(text) {
-        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-        return Promise.resolve();
-    }
-
-    /* ===================== LOAD LISTS FROM GITHUB ===================== */
-    async function loadAllLists() {
-        showLoading("Loading journal lists from GitHub...");
-        for (const [key, file] of Object.entries(LIST_FILES)) {
-            try {
-                const res = await fetch(GITHUB_RAW_BASE + file, { cache: 'no-store' });
-                if (!res.ok) throw new Error('Not found');
-                const text = await res.text();
-                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                journalLists[key] = [];
-
-                if (file.endsWith('.csv') && lines.length > 0) {
-                    const rows = tryParseCSV(text);
-                    const headers = rows[0].map(h => normalize(h));
-                    const titleCol = ['journal title', 'title', 'journal', 'name'].findIndex(h => headers.includes(h));
-                    const issnCol = ['issn', 'eissn', 'pissn'].findIndex(h => headers.includes(h));
-
-                    journalLists[key] = rows.slice(1).map(r => ({
-                        title: r[titleCol !== -1 ? titleCol : 0]?.trim() || 'Unknown Journal',
-                        titleNorm: normalize(r[titleCol !== -1 ? titleCol : 0]),
-                        issn: r[issnCol !== -1 ? issnCol : -1]?.trim() || ''
-                    }));
-                } else {
-                    // Handle .txt files with "Title | ISSN" format
-                    journalLists[key] = lines.map(l => {
-                        const parts = l.split('|').map(p => p.trim());
-                        return {
-                            title: parts[0] || l,
-                            titleNorm: normalize(parts[0] || l),
-                            issn: parts[1] || ''
-                        };
-                    });
-                }
-            } catch (e) {
-                journalLists[key] = [];
-                console.warn(`Failed to load ${file}`, e);
-            }
-        }
-
-        // Load transformative agreements
-        for (const file of TRANSFORMATIVE_CSVS) {
-            try {
-                const res = await fetch(GITHUB_RAW_BASE + file, { cache: 'no-store' });
-                if (!res.ok) continue;
-                const text = await res.text();
-                const rows = tryParseCSV(text);
-                const header = rows[0]?.map(h => normalize(h)) || [];
-                for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i];
-                    const obj = {};
-                    for (let j = 0; j < header.length; j++) obj[header[j]] = r[j] || '';
-                    const title = obj['journal'] || obj['title'] || r[0] || '';
-                    const issn = obj['issn'] || '';
-                    transformativeList.push({
-                        journal: title,
-                        titleNorm: normalize(title),
-                        issn: issn,
-                        linkLabel: file.replace(/\.csv$/i, ''),
-                        linkUrl: SANLIC_LINKS[file.replace(/\.csv$/i, '')] || ''
-                    });
-                }
-            } catch (e) {
-                console.warn(`Failed to load ${file}`, e);
-            }
-        }
-
-        // Load removed journals
-        try {
-            const res = await fetch(GITHUB_RAW_BASE + LIST_FILES.removed, { cache: 'no-store' });
-            if (res.ok) {
-                rawRemovedText = await res.text();
-                const rows = tryParseCSV(rawRemovedText);
-                if (rows.length > 1) {
-                    const headers = rows[0].map(h => normalize(h));
-                    const titleCol = headers.indexOf('journal title') !== -1 ? headers.indexOf('journal title') :
-                                     headers.indexOf('title') !== -1 ? headers.indexOf('title') : 0;
-                    const issnCol = headers.indexOf('issn') !== -1 ? headers.indexOf('issn') : -1;
-                    const yearCol = headers.indexOf('year removed') !== -1 ? headers.indexOf('year removed') :
-                                    headers.indexOf('year') !== -1 ? headers.indexOf('year') : -1;
-                    const lastReviewCol = headers.indexOf('date of last review') !== -1 ? headers.indexOf('date of last review') :
-                                          headers.indexOf('last review') !== -1 ? headers.indexOf('last review') : -1;
-
-                    journalLists.removed = rows.slice(1).map(r => ({
-                        title: r[titleCol] || r[0],
-                        titleNorm: normalize(r[titleCol] || r[0]),
-                        issn: r[issnCol] || '',
-                        yearRemoved: r[yearCol] || '',
-                        lastReviewDate: r[lastReviewCol] || ''
-                    }));
-                }
-            }
-        } catch (e) {
-            journalLists.removed = [];
-        }
-
-        hideLoading();
-    }
-
-    /* ===================== AUTOCOMPLETE ===================== */
-    journalQuery.addEventListener('input', () => {
-        const q = normalize(journalQuery.value);
-        autocompleteResults.innerHTML = '';
-        autocompleteResults.style.display = 'none';
-        if (q.length < 2) return;
-
-        const seen = new Set();
-        const suggestions = [];
-        for (const list of Object.values(journalLists)) {
-            if (!list || list === journalLists.removed) continue;
-            for (const j of list) {
-                if (j.titleNorm.includes(q) && !seen.has(j.title)) {
-                    seen.add(j.title);
-                    suggestions.push(j);
-                    if (suggestions.length >= 10) break;
-                }
-            }
-            if (suggestions.length >= 10) break;
-        }
-
-        if (suggestions.length) {
-            suggestions.forEach(s => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-item';
-                div.textContent = s.issn ? `${s.title} — ${s.issn}` : s.title;
-                div.setAttribute('role', 'option');
-                div.addEventListener('click', () => {
-                    journalQuery.value = s.title;
-                    autocompleteResults.style.display = 'none';
-                    runCheck();
-                });
-                autocompleteResults.appendChild(div);
-            });
-            autocompleteResults.style.display = 'block';
-        }
-    });
-
-    document.addEventListener('click', e => {
-        if (!autocompleteResults.contains(e.target) && e.target !== journalQuery) {
-            autocompleteResults.style.display = 'none';
-        }
-    });
-
-    /* ===================== SEARCH & MATCHING ===================== */
-    function findJournal(query) {
-        const qNorm = normalize(query);
-        const issn = isISSN(query) ? query.replace(/[^0-9Xx]/g, '').toLowerCase() : null;
-        const flags = {};
-        let sample = null;
-
-        for (const [key, list] of Object.entries(journalLists)) {
-            if (key === 'removed') continue;
-            flags[key] = false;
-            for (const j of list) {
-                const jISSN = j.issn.replace(/[^0-9Xx]/g, '').toLowerCase();
-                if (issn && jISSN && jISSN === issn) {
-                    flags[key] = true;
-                    sample = j;
-                    break;
-                }
-                if (j.titleNorm === qNorm || (j.titleNorm.includes(qNorm) && qNorm.length > 3)) {
-                    flags[key] = true;
-                    sample = j;
-                    break;
-                }
-            }
-        }
-        return { flags, sample };
-    }
-
-    function findRemoved(query) {
-        const qNorm = normalize(query);
-        const issn = isISSN(query) ? query.replace(/[^0-9Xx]/g, '').toLowerCase() : null;
-        for (const r of journalLists.removed || []) {
-            const rISSN = r.issn.replace(/[^0-9Xx]/g, '').toLowerCase();
-            if (issn && rISSN && rISSN === issn) return r;
-            if (r.titleNorm === qNorm || r.titleNorm.includes(qNorm)) return r;
-        }
-        return null;
-    }
-
-    /* ===================== LIVE API CHECKS ===================== */
-    async function fetchOpenAlexMetric(title) {
-        try {
-            const res = await fetch(`https://api.openalex.org/journals?filter=display_name.search:${encodeURIComponent(title)}`);
-            const data = await res.json();
-            return data.results?.[0]?.cited_by_count || 'N/A';
-        } catch (e) {
-            return 'Error';
-        }
-    }
-
-    async function fetchPubMedIndex(title) {
-        try {
-            const res = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(title)}&retmode=json`);
-            const data = await res.json();
-            return data.esearchresult?.idlist?.length > 0;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    /* ===================== REPORT GENERATION ===================== */
-    async function runCheck() {
-        const query = journalQuery.value.trim();
-        if (!query) return showError('Please enter a journal title or ISSN');
-
-        showLoading('Checking journal credibility...');
-        const { flags, sample } = findJournal(query);
-        const removed = findRemoved(query);
-        const taMatches = transformativeList.filter(t => {
-            const tISSN = t.issn.replace(/[^0-9Xx]/g, '').toLowerCase();
-            const jISSN = (sample?.issn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
-            return (tISSN && jISSN && tISSN === jISSN) || t.titleNorm === normalize(sample?.title || query);
-        });
-
-        const [impactFactor, pubmed] = await Promise.all([
-            fetchOpenAlexMetric(query),
-            fetchPubMedIndex(query)
-        ]);
-
-        // Recommendation logic
-        let recText = '⚠️ Verify manually: Appears in some indexes but not major ones';
-        let recClass = 'verify';
-        if (flags.dhet || flags.scopus || flags.wos) {
-            recText = '✅ Recommended: Appears in major credible indexes';
-            recClass = 'recommended';
-        }
-        if (removed) {
-            recText = '❌ Not recommended: Appears on removed list';
-            recClass = 'not-recommended';
-        }
-
-        // Build report
-        const reportLines = [
-            `🔍 Search: ${query}`,
-            `📘 Journal: ${sample?.title || query}`,
-            `📋 ISSN: ${sample?.issn || 'N/A'}`,
-            `📊 Impact Factor / CiteScore: ${impactFactor}`,
-            `🔗 Indexed in PubMed: ${pubmed ? 'Yes' : 'No'}`,
-            `🔓 Open Access: ${taMatches.length ? 'Yes (Transformative Agreement)' : 'Unknown'}`,
-            ``,
-            `================== ACCREDITATION LISTS ==================`,
-            `DHET:     ${flags.dhet ? '✅ Found' : '❌ Not found'}`,
-            `DOAJ:     ${flags.doaj ? '✅ Found' : '❌ Not found'}`,
-            `IBSS:     ${flags.ibss ? '✅ Found' : '❌ Not found'}`,
-            `Norwegian:${flags.norwegian ? '✅ Found' : '❌ Not found'}`,
-            `Other:    ${flags.dhet2 ? '✅ Found' : '❌ Not found'}`,
-            `SciELO:   ${flags.scielo ? '✅ Found' : '❌ Not found'}`,
-            `Scopus:   ${flags.scopus ? '✅ Found' : '❌ Not found'}`,
-            `WOS:      ${flags.wos ? '✅ Found' : '❌ Not found'}`,
-            ``,
-            `================== REMOVAL CHECK ==================`,
-            removed ? `Removed: ${removed.title} | ${removed.issn || 'N/A'} | Year: ${removed.yearRemoved || 'N/A'} | Last Review: ${formatDateFriendly(removed.lastReviewDate) || 'N/A'}` : 'Not on removed list',
-            ``,
-            `================== RECOMMENDATION ==================`,
-            recText
-        ];
-
-        journalReport.textContent = reportLines.join('\n');
-        journalReport.style.display = 'block';
-
-        recommendation.textContent = recText;
-        recommendation.className = `recommendation ${recClass}`;
-        recommendation.style.display = 'block';
-
-        if (taMatches.length) {
-            const links = taMatches.map(t => `<a class="transform-link" target="_blank" href="${escapeHtml(t.linkUrl)}">${escapeHtml(t.linkLabel)}</a>`).join(' • ');
-            recommendation.innerHTML += `<div style="margin-top:8px">Transformative: ${links}</div>`;
-        }
-
-        hideLoading();
-    }
-
-    /* ===================== BUTTONS ===================== */
-    checkBtn.addEventListener('click', runCheck);
-    journalQuery.addEventListener('keypress', e => { if (e.key === 'Enter') runCheck(); });
-
-    copyReportBtn.addEventListener('click', () => {
-        copyToClipboard(journalReport.textContent).then(() => alert('Report copied to clipboard'));
-    });
-
-    downloadReportBtn.addEventListener('click', () => {
-        const blob = new Blob([journalReport.textContent], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'journal-report.txt';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    showRemovedBtn.addEventListener('click', () => {
-        if (!journalLists.removed?.length) {
-            removedJournalsList.innerHTML = '<div style="padding:12px;color:#666">No removed journals data available.</div>';
-        } else {
-            let html = `<table class="table-compact"><thead><tr><th>Title</th><th>ISSN</th><th class="year">Year</th><th>Last Review</th></tr></thead><tbody>`;
-            journalLists.removed.forEach(r => {
-                html += `<tr>
-                    <td>${escapeHtml(r.title)}</td>
-                    <td>${escapeHtml(r.issn)}</td>
-                    <td class="year">${escapeHtml(r.yearRemoved || '')}</td>
-                    <td>${escapeHtml(formatDateFriendly(r.lastReviewDate) || '')}</td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            removedJournalsList.innerHTML = html;
-        }
-        removedJournalsList.style.display = 'block';
-    });
-
-    copyRemovedBtn.addEventListener('click', () => {
-        const csv = [
-            ['Title', 'ISSN', 'Year Removed', 'Last Review'],
-            ...(journalLists.removed || []).map(r => [r.title, r.issn, r.yearRemoved, formatDateFriendly(r.lastReviewDate)])
-        ].map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-        copyToClipboard(csv).then(() => alert('Removed list (CSV) copied to clipboard'));
-    });
-
-    /* ===================== UI HELPERS ===================== */
-    function showLoading(msg) {
-        loadingMessage.textContent = msg;
-        loadingMessage.style.display = 'block';
-    }
-
-    function hideLoading() {
-        loadingMessage.style.display = 'none';
-    }
-
-    function showError(msg) {
-        errorMessage.textContent = msg;
-        errorMessage.style.display = 'block';
-        setTimeout(() => errorMessage.style.display = 'none', 7000);
-    }
-
-    /* ===================== INIT ===================== */
-    (async () => {
-        try {
-            await loadAllLists();
-        } catch (e) {
-            hideLoading();
-            showError('Failed to load journal lists. Please check your connection.');
-            console.error(e);
-        }
-    })();
-});
+}
