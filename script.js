@@ -88,137 +88,115 @@ function parseCSV(text){
   });
 }
 
-/* Map accredited row variants to unified object - IMPROVED VERSION */
-function mapAccreditedRow(cols, header, sourceFileName) {
-  // header: array of header strings (may be passed as [] if unknown)
-  const h = header.map(x => String(x || '').trim());
-  const get = (names) => {
-    // return first column that matches any of names (case/space-insensitive)
-    const idx = h.findIndex(hname => names.some(n => hname.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase()));
-    return (idx >= 0 && cols[idx]) ? cols[idx].trim() : '';
-  };
-
-  // fallback if header not provided (some CSVs may be just columns with standard order)
-  const fallbackTitle = cols[0] || '';
-  const fallbackISSN = cols[1] || '';
-  const fallbackEISSN = cols[2] || '';
-  const fallbackPublisher = cols[3] || '';
-
-  // Get values using known header names
-  const title = get(['Journal title (Previous title if applicable)','Journal title','Journaltitle','Title','Journal Title']) || fallbackTitle;
-  const issn = get(['ISSN','PrintISSN','pISSN','ISSN (Print)']) || fallbackISSN;
-  const eissn = get(['eISSN','EISSN','OnlineISSN','ISSN (Online)','e-ISSN']) || fallbackEISSN;
-  let lastReview = get(['DATE OF LAST REVIEW OR ACCREDITATION','Date of Last Review or Accreditation','LastReview','AccreditedDate','Reviewed','Year Reviewed','Review Date']) || '';
-  const international = get(['International Accreditation','International','Index','International Status']) || '';
-  const frequency = get(['FREQUENCY','Frequency','Publication Frequency']) || '';
-  let publisher = get(['Publisher','Publisher details','Publisherdetails','Publisher’sdetails','Publisher Name','Publisher Information']) || fallbackPublisher;
-
-  // Special handling for different file types
-  if (sourceFileName.includes('SCIELO')) {
-    // For SCIELO files, extract review date from publisher field if needed
-    if (publisher.match(/\b(19|20)\d{2}\b/) && !lastReview) {
-      const reviewMatch = publisher.match(/\b(Reviewed|Review|Accredited)?\s*(19|20)\d{2}\b/);
-      if (reviewMatch) {
-        lastReview = reviewMatch[0];
-        // Clean up the publisher field by removing the review info and any trailing punctuation
-        publisher = publisher.replace(reviewMatch[0], '')
-                            .replace(/\s*[,-]\s*$/, '')
-                            .replace(/\s*\.\s*$/, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-      }
-    }
-  } else if (sourceFileName.includes('DHET')) {
-    // For DHET files, check if publisher field contains review info
-    if (publisher.match(/\b(19|20)\d{2}\b/) && !lastReview) {
-      const reviewMatch = publisher.match(/\b(Reviewed|Review|Accredited)?\s*(19|20)\d{2}\b/);
-      if (reviewMatch) {
-        lastReview = reviewMatch[0];
-        // Clean up the publisher field
-        publisher = publisher.replace(reviewMatch[0], '')
-                            .replace(/\s*[,-]\s*$/, '')
-                            .replace(/\s*\.\s*$/, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-      }
-    }
+/* ================ UNIVERSAL FIELD EXTRACTION ================ */
+class UniversalFieldExtractor {
+  constructor() {
+    this.fieldPatterns = {
+      title: [
+        'title', 'journal.*title', 'journal.*name', 'name', 'publication.*title',
+        'journal', 'publication', 'journal title', 'journal name'
+      ],
+      issn: [
+        'issn', 'issn.*1', 'issn.*2', 'issn.*online', 'issn.*print',
+        'international.*standard.*serial.*number', 'issn.*number', 'print.*issn',
+        'online.*issn', 'eissn', 'e.*issn'
+      ],
+      eissn: [
+        'eissn', 'e.*issn', 'online.*issn', 'electronic.*issn', 'issn.*online',
+        'digital.*issn'
+      ],
+      publisher: [
+        'publisher', 'publishers', 'publisher.*details', 'publisher.*name',
+        'journal.*publisher', 'published.*by', 'publishing.*house', 'publishing.*company',
+        'pub.*', 'publisher.*information', 'publisher info'
+      ],
+      frequency: [
+        'frequency', 'pub.*frequency', 'publication.*frequency', 'issues.*per.*year',
+        'publication.*rate', 'issues.*per.*volume'
+      ],
+      lastReview: [
+        'date.*last.*review', 'last.*review', 'review.*date', 'accreditation.*date',
+        'year.*reviewed', 'date.*accreditation'
+      ],
+      international: [
+        'international', 'international.*accreditation', 'international.*status',
+        'index', 'indexed', 'indexing'
+      ]
+    };
   }
 
-  // Additional cleanup for publisher field - remove any remaining review-like text
-  if (publisher) {
-    // Remove common review phrases that might be stuck in publisher field
-    const reviewPhrases = [
-      'Reviewed', 'Review', 'Accredited', 'Accreditation', 
-      'Date of Last Review', 'Last Review', 'Year Reviewed'
-    ];
+  extractField(row, header, fieldType) {
+    if (!this.fieldPatterns[fieldType]) return '';
     
-    reviewPhrases.forEach(phrase => {
-      if (publisher.includes(phrase) && lastReview) {
-        publisher = publisher.replace(new RegExp(phrase, 'gi'), '')
-                            .replace(/\s*[,-]\s*$/, '')
-                            .replace(/\s*\.\s*$/, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-      }
-    });
+    const values = [];
     
-    // Remove years that might be stuck in publisher field
-    if (publisher.match(/\b(19|20)\d{2}\b/) && lastReview) {
-      publisher = publisher.replace(/\b(19|20)\d{2}\b/, '')
-                          .replace(/\s*[,-]\s*$/, '')
-                          .replace(/\s*\.\s*$/, '')
-                          .replace(/\s+/g, ' ')
-                          .trim();
-    }
-  }
-
-  // If publisher is empty after cleanup, try to find it in other columns
-  if (!publisher || publisher.length < 3) {
-    // Look for publisher information in other columns
-    for (let i = 0; i < cols.length; i++) {
-      const colValue = cols[i] || '';
-      if (colValue.toLowerCase().includes('publisher') || 
-          colValue.toLowerCase().includes('publish') || 
-          colValue.toLowerCase().includes('press') ||
-          colValue.toLowerCase().includes('publications') ||
-          colValue.toLowerCase().includes('publishers') ||
-          colValue.toLowerCase().includes('publishing') ||
-          colValue.toLowerCase().includes('ltd') ||
-          colValue.toLowerCase().includes('inc') ||
-          colValue.toLowerCase().includes('llc') ||
-          colValue.toLowerCase().includes('gmbh') ||
-          colValue.toLowerCase().includes('verlag') ||
-          colValue.toLowerCase().includes('editorial') ||
-          colValue.toLowerCase().includes('editions') ||
-          colValue.toLowerCase().includes('books') ||
-          colValue.toLowerCase().includes('academic') ||
-          colValue.toLowerCase().includes('university') ||
-          colValue.toLowerCase().includes('college') ||
-          colValue.toLowerCase().includes('institute') ||
-          colValue.toLowerCase().includes('association') ||
-          colValue.toLowerCase().includes('society') ||
-          colValue.toLowerCase().includes('foundation') ||
-          colValue.toLowerCase().includes('group')) {
-        
-        // Make sure it's not a header column and contains actual publisher-like text
-        if (!h[i] || !h[i].toLowerCase().includes('publisher')) {
-          publisher = colValue;
+    // First try to find by header name pattern matching
+    for (let i = 0; i < header.length; i++) {
+      const colName = String(header[i] || '').toLowerCase().trim();
+      const value = String(row[i] || '').trim();
+      
+      if (!value || value.toLowerCase() === 'nan' || value.toLowerCase() === 'null') continue;
+      
+      for (const pattern of this.fieldPatterns[fieldType]) {
+        const regex = new RegExp(pattern, 'i');
+        if (regex.test(colName)) {
+          if (value && !values.includes(value)) {
+            values.push(value);
+          }
           break;
         }
       }
     }
+    
+    // If no values found by header matching, try to find in any column by content pattern
+    if (values.length === 0) {
+      for (let i = 0; i < row.length; i++) {
+        const value = String(row[i] || '').trim();
+        if (!value || value.toLowerCase() === 'nan' || value.toLowerCase() === 'null') continue;
+        
+        // For specific field types, check if content matches expected patterns
+        if (fieldType === 'issn' || fieldType === 'eissn') {
+          if (looksISSN(value)) {
+            values.push(value);
+          }
+        } else if (fieldType === 'publisher') {
+          // Look for publisher-like content (company names, publishing terms)
+          if (this.looksLikePublisher(value)) {
+            values.push(value);
+          }
+        }
+      }
+    }
+    
+    return values.length > 0 ? values.join('; ') : '';
   }
 
-  // Final cleanup of publisher field
-  if (publisher) {
-    publisher = publisher
-      .replace(/\b(Reviewed|Review|Accredited|Accreditation|Date of Last Review|Last Review|Year Reviewed)\b/gi, '')
-      .replace(/\b(19|20)\d{2}\b/, '')
-      .replace(/\s*[,-]\s*$/, '')
-      .replace(/\s*\.\s*$/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+  looksLikePublisher(value) {
+    const lowerValue = value.toLowerCase();
+    const publisherIndicators = [
+      'publisher', 'publishing', 'press', 'publications', 'ltd', 'inc', 'llc',
+      'gmbh', 'verlag', 'editorial', 'editions', 'books', 'academic', 'university',
+      'college', 'institute', 'association', 'society', 'foundation', 'group',
+      'corporation', 'company', 'co.', '& sons', '& daughters'
+    ];
+    
+    return publisherIndicators.some(indicator => lowerValue.includes(indicator));
   }
+}
+
+/* ================ IMPROVED MAPPING FUNCTIONS ================ */
+const fieldExtractor = new UniversalFieldExtractor();
+
+function mapAccreditedRow(cols, header, sourceFileName) {
+  const h = header.length > 0 ? header : Array(cols.length).fill('').map((_, i) => `Column${i+1}`);
+  
+  const title = fieldExtractor.extractField(cols, h, 'title') || cols[0] || '';
+  const issn = fieldExtractor.extractField(cols, h, 'issn') || '';
+  const eissn = fieldExtractor.extractField(cols, h, 'eissn') || '';
+  const publisher = fieldExtractor.extractField(cols, h, 'publisher') || '';
+  const lastReview = fieldExtractor.extractField(cols, h, 'lastReview') || '';
+  const international = fieldExtractor.extractField(cols, h, 'international') || '';
+  const frequency = fieldExtractor.extractField(cols, h, 'frequency') || '';
 
   // Determine the source list type from filename
   let listType = 'Unknown';
@@ -231,77 +209,102 @@ function mapAccreditedRow(cols, header, sourceFileName) {
   else if (sourceFileName.includes('WOS')) listType = 'WOS';
 
   return {
-    title: title || '',
-    titleNorm: normalize(title || ''),
-    issn: (issn || '').replace(/\s+/g,''),
-    eissn: (eissn || '').replace(/\s+/g,''),
-    publisher: publisher || '',
-    lastReview: lastReview || '',
-    international: international || '',
-    frequency: frequency || '',
+    title: title.trim(),
+    titleNorm: normalize(title),
+    issn: issn.replace(/\s+/g,''),
+    eissn: eissn.replace(/\s+/g,''),
+    publisher: publisher.trim(),
+    lastReview: lastReview.trim(),
+    international: international.trim(),
+    frequency: frequency.trim(),
     source: 'accredited',
     listType: listType
   };
 }
 
-/* Map transformative row variants - IMPROVED VERSION */
-function mapTransformRow(cols, header, sourceFileName){
-  const h = header.map(x => String(x || '').trim());
-  const get = (names) => {
-    const idx = h.findIndex(hname => names.some(n => hname.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase()));
-    return (idx >= 0 && cols[idx]) ? cols[idx].trim() : '';
-  };
-
-  const fallbackTitle = cols[0] || '';
-  const fallbackEISSN = cols[1] || '';
-  const fallbackPublisher = cols[4] || '';
-
-  const title = get(['Journal Title','JournalTitle','Title','Journal','Publication Title']) || fallbackTitle;
-  const eissn = get(['eISSN','EISSN','OnlineISSN','Electronic ISSN','e-ISSN']) || fallbackEISSN;
-  const oaStatus = get(['Open Access Status','OpenAccessStatus','OpenAccess','OAStatus','OA Model']) || '';
-  const included = get(['Included in R&P agreement','IncludedinR&Pagreement','Included','IncludedinRPagreement','Agreement Status']) || '';
-  const explanation = get(['Explanation if not included','Explanationifnotincluded','Notes','Comments','Remarks']) || '';
-  const subject = get(['Subject','Subject Area','Discipline']) || '';
-  const publisher = get(['Publisher','Publisher details','Publisherdetails','Publisher Name']) || fallbackPublisher;
-  const duration = get(['Agreement Duration','Duration','Agreement Period','Contract Duration']) || '';
+function mapTransformRow(cols, header, sourceFileName) {
+  const h = header.length > 0 ? header : Array(cols.length).fill('').map((_, i) => `Column${i+1}`);
+  
+  const title = fieldExtractor.extractField(cols, h, 'title') || cols[0] || '';
+  const eissn = fieldExtractor.extractField(cols, h, 'eissn') || '';
+  const publisher = fieldExtractor.extractField(cols, h, 'publisher') || '';
+  
+  // For transformative agreements, we need to extract additional fields
+  let oaStatus = '', included = '', notes = '', subject = '', duration = '';
+  
+  // Try to extract other fields by content pattern if headers don't match
+  for (let i = 0; i < cols.length; i++) {
+    const value = String(cols[i] || '').trim();
+    if (!value) continue;
+    
+    const lowerValue = value.toLowerCase();
+    
+    if (!oaStatus && (lowerValue.includes('open access') || lowerValue.includes('oa'))) {
+      oaStatus = value;
+    }
+    if (!included && (lowerValue.includes('included') || lowerValue.includes('yes') || lowerValue.includes('no'))) {
+      included = value;
+    }
+    if (!subject && (lowerValue.includes('subject') || lowerValue.includes('discipline') || 
+                     lowerValue.includes('field') || lowerValue.includes('category'))) {
+      subject = value;
+    }
+    if (!duration && (lowerValue.includes('duration') || lowerValue.includes('period') || 
+                     lowerValue.match(/\b(202[3-9]|203[0-9])\b/))) {
+      duration = value;
+    }
+    if (!notes && (lowerValue.includes('note') || lowerValue.includes('comment') || 
+                  lowerValue.includes('remark') || lowerValue.includes('explanation'))) {
+      notes = value;
+    }
+  }
 
   return {
-    title: title || '',
-    titleNorm: normalize(title || ''),
-    eissn: (eissn || '').replace(/\s+/g,''),
-    oaStatus: oaStatus || '',
-    included: included || '',
-    notes: explanation || '',
-    subject: subject || '',
-    publisher: publisher || '',
-    duration: duration || '',
+    title: title.trim(),
+    titleNorm: normalize(title),
+    eissn: eissn.replace(/\s+/g,''),
+    oaStatus: oaStatus,
+    included: included || 'Yes', // Default to Yes if not specified
+    notes: notes,
+    subject: subject,
+    publisher: publisher.trim(),
+    duration: duration,
     source: 'transformative'
   };
 }
 
-/* Map removed row variants - IMPROVED VERSION */
-function mapRemovedRow(cols, header, sourceFileName){
-  const h = header.map(x => String(x || '').trim());
-  const get = (names) => {
-    const idx = h.findIndex(hname => names.some(n => hname.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase()));
-    return (idx >= 0 && cols[idx]) ? cols[idx].trim() : '';
-  };
-
-  const fallbackTitle = cols[0] || '';
-  const fallbackISSN = cols[1] || '';
-  const title = get(['JOURNALTITLE(Previoustitleifapplicable)','Journal title','JournalTitle','Title','Journal Name']) || fallbackTitle;
-  const issn = get(['ISSN','ISSN(Online)','eISSN','Print ISSN','Online ISSN']) || fallbackISSN;
-  const reason = get(['Reason','REASON','Comment','Removal Reason','Justification']) || '';
-  const review = get(['DATE OF LAST REVIEW OR ACCREDITATION','Reviewed','Reviewdate','Review/Year','Last Review Date']) || '';
-  const publisher = get(['Publisher','Publisher details','Publisherdetails','Publisher Name']) || '';
+function mapRemovedRow(cols, header, sourceFileName) {
+  const h = header.length > 0 ? header : Array(cols.length).fill('').map((_, i) => `Column${i+1}`);
+  
+  const title = fieldExtractor.extractField(cols, h, 'title') || cols[0] || '';
+  const issn = fieldExtractor.extractField(cols, h, 'issn') || '';
+  const publisher = fieldExtractor.extractField(cols, h, 'publisher') || '';
+  
+  // Try to find reason and review fields
+  let reason = '', review = '';
+  for (let i = 0; i < cols.length; i++) {
+    const value = String(cols[i] || '').trim();
+    if (!value) continue;
+    
+    const lowerValue = value.toLowerCase();
+    
+    if (!reason && (lowerValue.includes('reason') || lowerValue.includes('why') || 
+                   lowerValue.includes('cause') || lowerValue.includes('explanation'))) {
+      reason = value;
+    }
+    if (!review && (lowerValue.includes('review') || lowerValue.includes('date') || 
+                   lowerValue.match(/\b(19|20)\d{2}\b/) || lowerValue.includes('year'))) {
+      review = value;
+    }
+  }
 
   return {
-    title: title || '',
-    titleNorm: normalize(title || ''),
-    issn: (issn || '').replace(/\s+/g,''),
-    reason: reason || '',
-    review: review || '',
-    publisher: publisher || '',
+    title: title.trim(),
+    titleNorm: normalize(title),
+    issn: issn.replace(/\s+/g,''),
+    reason: reason,
+    review: review,
+    publisher: publisher.trim(),
     source: 'removed'
   };
 }
@@ -321,12 +324,14 @@ async function loadAccredited(){
       const text = await fetchText(RAW_BASE + encodeURIComponent(f));
       const rows = parseCSV(text);
       if(!rows.length) continue;
+      
       // detect header possibility
       const header = rows[0].some(c => /journal|title|issn/i.test(String(c))) ? rows[0] : [];
       const dataRows = header.length ? rows.slice(1) : rows;
+      
       for(const cols of dataRows){
         if(!cols.some(c => String(c || '').trim())) continue;
-        const mapped = mapAccreditedRow(cols, header.length ? header : cols, f);
+        const mapped = mapAccreditedRow(cols, header, f);
         if(mapped.title) results.push(mapped);
       }
     }catch(e){ console.warn('Failed to load accredited file', f, e); }
@@ -341,11 +346,13 @@ async function loadRemoved(){
     const text = await fetchText(RAW_BASE + encodeURIComponent(REMOVED_FILE));
     const rows = parseCSV(text);
     if(!rows.length) { removedList = []; return; }
+    
     const header = rows[0].some(c => /journal|title|issn/i.test(String(c))) ? rows[0] : [];
     const dataRows = header.length ? rows.slice(1) : rows;
+    
     for(const cols of dataRows){
       if(!cols.some(c => String(c || '').trim())) continue;
-      out.push(mapRemovedRow(cols, header.length ? header : cols, REMOVED_FILE));
+      out.push(mapRemovedRow(cols, header, REMOVED_FILE));
     }
   }catch(e){ console.warn('Failed to load removed file', e); }
   removedList = out;
@@ -359,11 +366,13 @@ async function loadTransformative(){
       const text = await fetchText(RAW_BASE + encodeURIComponent(f));
       const rows = parseCSV(text);
       if(!rows.length) continue;
+      
       const header = rows[0].some(c => /journal|title|eissn|included/i.test(String(c))) ? rows[0] : [];
       const dataRows = header.length ? rows.slice(1) : rows;
+      
       for(const cols of dataRows){
         if(!cols.some(c => String(c || '').trim())) continue;
-        const mapped = mapTransformRow(cols, header.length ? header : cols, f);
+        const mapped = mapTransformRow(cols, header, f);
         if(mapped.title) results.push(mapped);
       }
     }catch(e){ console.warn('Failed to load transformative file', f, e); }
@@ -634,41 +643,44 @@ async function doSearch(rawQuery){
   // Build report sections as separate tables
   const parts = [];
 
-  // Journal Identification - FIXED: Use proper publisher info
+  // Journal Identification - Use proper publisher info from our extracted data
   const idTitle = accreditedHits[0]?.title || taHits[0]?.title || (qInput ? qInput.value : '') || query;
   const idPublisher = accreditedHits[0]?.publisher || taHits[0]?.publisher || live.crossref?.publisher || live.openalex?.publisher || '';
   const idISSN = [accreditedHits[0]?.issn, accreditedHits[0]?.eissn, taHits[0]?.eissn].filter(Boolean).join(' | ');
+  
   const identificationRows = [
     ['Journal Title', idTitle],
-    ['ISSN', idISSN || 'N/A'],
-    ['Publisher', idPublisher || 'Unknown']
+    ['ISSN', idISSN || 'N/A']
   ];
   
-  // Add Last Review field if available
+  // Only add Publisher field if we have data
+  if (idPublisher) {
+    identificationRows.push(['Publisher', idPublisher]);
+  }
+  
+  // Add other fields if available
   if (accreditedHits[0]?.lastReview) {
     identificationRows.push(['Last Review', accreditedHits[0].lastReview]);
   }
   
-  // Add Frequency field if available
   if (accreditedHits[0]?.frequency) {
     identificationRows.push(['Frequency', accreditedHits[0].frequency]);
   }
   
-  // Add International field if available
   if (accreditedHits[0]?.international) {
     identificationRows.push(['International', accreditedHits[0].international]);
   }
   
   parts.push({ title: 'Journal Identification', rows: identificationRows });
 
-  // Accreditation Checks - FIXED: Show which lists journal was found in
+  // Accreditation Checks
   const accRows = [
     ['Found in 2025 Accredited Lists', accreditedHits.length ? `Yes (${foundInLists.join(', ')})` : 'No'],
     ['Removed 4rm Previous Accredited List', removedMatch ? 'Yes (historical)' : 'No']
   ];
   parts.push({ title: 'Accreditation Checks', rows: accRows });
 
-  // Transformative Agreements
+  // Transformative Agreements - IMPROVED: Show "Not applicable" when not found
   const taRows = [];
   if(taHits.length){
     const t = taHits[0];
@@ -679,7 +691,7 @@ async function doSearch(rawQuery){
     if(t.notes) taRows.push(['Notes', t.notes]);
     if(t.subject) taRows.push(['Subject', t.subject]);
   } else {
-    taRows.push(['Transformative', 'No match found']);
+    taRows.push(['Transformative', 'Not applicable']);
   }
   parts.push({ title: 'Transformative Agreements', rows: taRows });
 
@@ -714,7 +726,7 @@ async function doSearch(rawQuery){
       reportContainer.appendChild(table);
     }
 
-    // Add Recommendation as a special section (not in a table)
+    // Add Recommendation as a special section
     const recContainer = document.createElement('div');
     recContainer.className = `rec ${recClass}`;
     recContainer.style.display = 'block';
@@ -725,7 +737,6 @@ async function doSearch(rawQuery){
     recContainer.style.border = '1px solid transparent';
     recContainer.innerHTML = `<h3 style="margin:0 0 10px 0;">Recommendation</h3><p style="margin:0; font-size:16px;">${recText}</p>`;
     
-    // Add to the end of the report container
     reportContainer.appendChild(recContainer);
   }
 
@@ -746,7 +757,6 @@ function renderRemovedTable(){
 }
 
 /* ================== EXPORT / DEBUG UTIL ================== */
-/* Optional: expose datasets for debugging */
 window._ufsDatasets = {
   get accredited(){ return accredited; },
   get transformList(){ return transformList; },
