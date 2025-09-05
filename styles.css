@@ -132,6 +132,22 @@ button:active { transform: translateY(0); }
   border-bottom: none;
 }
 
+/* Link styling */
+.info-value a {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.info-value a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 /* Recommendation section */
 .recommendation {
   margin-top: 24px;
