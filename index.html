@@ -4,13 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>UFS Journal Credibility Checker</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* CSS will be embedded here */
+  </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>UFS Journal Credibility Checker</h1>
-      <div class="sub">Verify the journal’s credibility using 2025 accredited lists, transformative agreements, and real-time checks via Crossref, PubMed, and OpenAlex.</div>
+      <div class="sub">Verify the journal's credibility using 2025 accredited lists, transformative agreements, and real-time checks via Crossref, PubMed, and OpenAlex.</div>
     </header>
 
     <main class="card">
@@ -23,24 +26,26 @@
       </div>
 
       <div class="toolbar">
-        <button id="btn-copy" class="btn-accent">📋 Copy Report</button>
-        <button id="btn-download" class="btn-accent">💾 Download Report</button>
-        <button id="btn-show-removed" class="btn-muted">🚨 Show Removed 4rm Accredited List</button>
-        <button id="btn-copy-removed" class="btn-muted">📄 Copy Removed List</button>
+        <button id="btn-copy" class="btn-accent"><i class="fas fa-copy"></i> Copy Report</button>
+        <button id="btn-download" class="btn-accent"><i class="fas fa-download"></i> Download Report</button>
+        <button id="btn-show-removed" class="btn-muted"><i class="fas fa-exclamation-triangle"></i> Show Removed from Accredited List</button>
+        <button id="btn-copy-removed" class="btn-muted"><i class="fas fa-clipboard-list"></i> Copy Removed List</button>
       </div>
 
-      <div class="status loading" id="loading" aria-live="polite">Loading journal data…</div>
+      <div class="status loading" id="loading" aria-live="polite">
+        <i class="fas fa-spinner fa-spin"></i> Loading journal data…
+      </div>
       <div class="status error" id="error" aria-live="assertive"></div>
 
-      <!-- REPORT OUTPUT: table sections inserted here -->
+      <!-- REPORT OUTPUT: sections inserted here -->
       <div id="report-container">
-        <!-- report tables will be injected here -->
+        <!-- report content will be injected here -->
       </div>
 
       <!-- Removed list panel -->
       <div id="removed-panel" class="removed-panel" aria-hidden="true">
         <div class="removed-head">
-          <strong>Removed 4rm Accredited List (historical)</strong>
+          <strong>Removed from Accredited List (historical)</strong>
           <span style="color:var(--muted)">Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
         </div>
         <div class="removed-body">
@@ -52,6 +57,8 @@
     </main>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    // JavaScript will be embedded here
+  </script>
 </body>
 </html>
