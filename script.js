@@ -20,7 +20,7 @@ const REMOVED_FILE = 'JOURNALS REMOVED IN PAST YEARS.csv';
 const TRANSFORMATIVE_FILES = [
   'WILEY_2025.csv',
   'The Company of Biologists_2025.csv',
-  'Taylir & Francis_2025.csv',
+  'Taylor & Francis_2025.csv',
   'Springer_2025.csv',
   'ScienceDirect (Elsevier)_2025.csv',
   'SAGE Publishing_2025.csv',
@@ -35,6 +35,26 @@ const TRANSFORMATIVE_FILES = [
   'American Institute of Physics (AIP)_2025.csv',
   'American Chemicals Society(ACS)_2025.csv'
 ];
+
+/* Transformative agreement URLs */
+const TRANSFORMATIVE_AGREEMENT_URLS = {
+  'American Chemicals Society(ACS)_2025.csv': 'https://sanlic.ac.za/american-chemical-society-acs/',
+  'American Institute of Physics (AIP)_2025.csv': 'https://sanlic.ac.za/american-institute-of-physics-2/',
+  'Association for Computing Machinery (ACM)_2025.csv': 'https://sanlic.ac.za/association-for-computing-machinery-acm/',
+  'Bentham Science Publisherst_2025.csv': 'https://sanlic.ac.za/bentham-science-publishers-2/',
+  'Cambridge University Press (CUP)_2025.csv': 'https://sanlic.ac.za/cambridge-university-press/',
+  'Emerald_2025.csv': 'https://sanlic.ac.za/emerald/',
+  'IOPscienceExtra_2025.csv': 'https://sanlic.ac.za/iopscience-extra/',
+  'Oxford University Press Journals_2025.csv': 'https://sanlic.ac.za/oxford-university-press-journals/',
+  'Royal Society_2025.csv': 'https://sanlic.ac.za/royal-society/',
+  'Royal Society of Chemistry Platinum_2025.csv': 'https://sanlic.ac.za/royal-society-of-chemistry/',
+  'SAGE Publishing_2025.csv': 'https://sanlic.ac.za/sage-publishing/',
+  'ScienceDirect (Elsevier)_2025.csv': 'https://sanlic.ac.za/sciencedirect-elsevier/',
+  'Springer_2025.csv': 'https://sanlic.ac.za/springer/',
+  'Taylor & Francis_2025.csv': 'https://sanlic.ac.za/taylor-francis/',
+  'The Company of Biologists_2025.csv': 'https://sanlic.ac.za/the-company-of-biologists/',
+  'WILEY_2025.csv': 'https://sanlic.ac.za/wiley/'
+};
 
 /* ================ DOM ================ */
 const $ = id => document.getElementById(id);
@@ -274,7 +294,8 @@ function mapTransformRow(cols, header, sourceFileName) {
     subject: subject,
     publisher: publisher.trim(),
     duration: duration,
-    source: 'transformative'
+    source: 'transformative',
+    sourceFileName: sourceFileName
   };
 }
 
@@ -766,6 +787,24 @@ async function doSearch(rawQuery){
     // Transformative Agreements Section
     const transformativeSection = document.createElement('div');
     transformativeSection.className = 'report-section';
+    
+    // Get agreement URL if available
+    let agreementLink = '';
+    if (taHits.length && taHits[0].sourceFileName) {
+      const agreementUrl = TRANSFORMATIVE_AGREEMENT_URLS[taHits[0].sourceFileName];
+      if (agreementUrl) {
+        agreementLink = `<div class="info-item">
+          <div class="info-label">Agreement Details</div>
+          <div class="info-value">
+            <a href="${agreementUrl}" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-external-link-alt"></i>
+              View Agreement Terms
+            </a>
+          </div>
+        </div>`;
+      }
+    }
+
     transformativeSection.innerHTML = `
       <div class="report-header">Transformative Agreements</div>
       <div class="report-content">
@@ -780,6 +819,7 @@ async function doSearch(rawQuery){
             <div class="info-value">${escapeHtml(taHits[0].publisher)}</div>
           </div>
           ` : ''}
+          ${agreementLink}
         </div>
       </div>
     `;
