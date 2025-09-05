@@ -443,11 +443,11 @@ function setupEventListeners() {
     btnShowRemoved.addEventListener('click', () => {
       if(removedPanel.style.display === 'block'){ 
         removedPanel.style.display='none'; 
-        btnShowRemoved.textContent='🚨 Show Removed 4rm Accredited List'; 
+        btnShowRemoved.textContent='🚨 Show Removed from Accredited List'; 
       } else {
         renderRemovedTable();
         removedPanel.style.display = 'block';
-        btnShowRemoved.textContent='🚨 Hide Removed 4rm Accredited List';
+        btnShowRemoved.textContent='🚨 Hide Removed from Accredited List';
       }
     });
   }
@@ -624,7 +624,7 @@ async function doSearch(rawQuery){
   let recText = '';
   let recClass = '';
   if(removedMatch){
-    recText = '❌ Not recommended: Appears on the "Removed 4rm Previous Accredited List".';
+    recText = '❌ Not recommended: Appears on the "Removed from Previous Accredited List".';
     recClass = 'removed';
   } else if(accreditedHits.length && taHits.length){
     recText = '✅ Recommended: Appears in credible indexes and is included in a Transformative Agreement.';
@@ -676,7 +676,7 @@ async function doSearch(rawQuery){
   // Accreditation Checks
   const accRows = [
     ['Found in 2025 Accredited Lists', accreditedHits.length ? `Yes (${foundInLists.join(', ')})` : 'No'],
-    ['Removed 4rm Previous Accredited List', removedMatch ? 'Yes (historical)' : 'No']
+    ['Removed from Previous Accredited List', removedMatch ? 'Yes (historical)' : 'No']
   ];
   parts.push({ title: 'Accreditation Checks', rows: accRows });
 
