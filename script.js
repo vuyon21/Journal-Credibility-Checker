@@ -61,6 +61,11 @@ function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,' ').re
 function looksISSN(s){ return /\b\d{4}-?\d{3}[\dXx]\b/.test(s || ''); }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
+// Deduplicate array while preserving order
+function deduplicateArray(arr) {
+  return [...new Set(arr)].filter(Boolean);
+}
+
 /* Robust CSV parser that returns array of rows (array of columns) */
 function parseCSV(text){
   if(!text) return [];
@@ -443,11 +448,11 @@ function setupEventListeners() {
     btnShowRemoved.addEventListener('click', () => {
       if(removedPanel.style.display === 'block'){ 
         removedPanel.style.display='none'; 
-        btnShowRemoved.textContent='🚨 Show Removed from Accredited List'; 
+        btnShowRemoved.innerHTML='<i class="fas fa-exclamation-triangle"></i> Show Removed from Accredited List'; 
       } else {
         renderRemovedTable();
         removedPanel.style.display = 'block';
-        btnShowRemoved.textContent='🚨 Hide Removed from Accredited List';
+        btnShowRemoved.innerHTML='<i class="fas fa-exclamation-triangle"></i> Hide Removed from Accredited List';
       }
     });
   }
@@ -521,7 +526,16 @@ async function fetchCrossRef(titleOrISSN){
       const r = await fetch(`https://api.crossref.org/journals/${encodeURIComponent(id)}`);
       if(!r.ok) return null;
       const j = await r.json();
-      return { publisher: j?.message?.publisher || null, issn: (j?.message?.ISSN || []).join(' / ') || null, source: 'CrossRef' };
+      
+      // Deduplicate ISSNs before returning
+      const issns = j?.message?.ISSN || [];
+      const uniqueIssns = deduplicateArray(issns);
+      
+      return { 
+        publisher: j?.message?.publisher || null, 
+        issn: uniqueIssns.join(' / ') || null, 
+        source: 'CrossRef' 
+      };
     } else {
       // fallback: search works (container-title)
       const r = await fetch(`https://api.crossref.org/works?query.container-title=${encodeURIComponent(titleOrISSN)}&rows=1`);
@@ -529,8 +543,18 @@ async function fetchCrossRef(titleOrISSN){
       const j = await r.json();
       const it = j?.message?.items?.[0];
       if(!it) return null;
+      
+      // Deduplicate ISSNs
+      const issns = it.ISSN || [];
+      const uniqueIssns = deduplicateArray(issns);
+      
       const lic = it.license && it.license[0] && it.license[0].URL ? it.license[0].URL : null;
-      return { publisher: it.publisher || null, issn: (it.ISSN||[]).join(' / ') || null, license: lic, source: 'CrossRef' };
+      return { 
+        publisher: it.publisher || null, 
+        issn: uniqueIssns.join(' / ') || null, 
+        license: lic, 
+        source: 'CrossRef' 
+      };
     }
   }catch(e){ console.warn('CrossRef lookup failed', e); return null; }
 }
@@ -538,14 +562,22 @@ async function fetchCrossRef(titleOrISSN){
 async function fetchOpenAlex(titleOrISSN){
   try{
     // search venues by ISSN or name
-    const q = looksISSN(titleOrISSN) ? `filter=issn:${encodeURIComponent(titleOrISSN)}` : `search=${encodeURIComponent(titleOrISSN)}`;
-    const url = looksISSN(titleOrISSN) ? `https://api.openalex.org/venues?filter=issn:${encodeURIComponent(titleOrISSN)}&per-page=1` : `https://api.openalex.org/venues?search=${encodeURIComponent(titleOrISSN)}&per-page=1`;
+    const url = looksISSN(titleOrISSN) 
+      ? `https://api.openalex.org/venues?filter=issn:${encodeURIComponent(titleOrISSN)}&per-page=1` 
+      : `https://api.openalex.org/venues?search=${encodeURIComponent(titleOrISSN)}&per-page=1`;
+      
     const r = await fetch(url);
     if(!r.ok) return null;
     const j = await r.json();
     const v = j?.results?.[0];
     if(!v) return null;
-    return { publisher: v.publisher || null, issn_l: v.issn_l || null, homepage_url: v?.homepage_url || null, oa_status: v?.is_oa ? 'Open Access' : 'Closed', source: 'OpenAlex' };
+    return { 
+      publisher: v.publisher || null, 
+      issn_l: v.issn_l || null, 
+      homepage_url: v?.homepage_url || null, 
+      oa_status: v?.is_oa ? 'Open Access' : 'Closed', 
+      source: 'OpenAlex' 
+    };
   }catch(e){ console.warn('OpenAlex lookup failed', e); return null; }
 }
 
@@ -623,120 +655,167 @@ async function doSearch(rawQuery){
   // Recommendation logic
   let recText = '';
   let recClass = '';
+  let recIcon = '';
   if(removedMatch){
-    recText = '❌ Not recommended: Appears on the "Removed from Previous Accredited List".';
-    recClass = 'removed';
+    recText = 'Not recommended: This journal appears on the "Removed from Previous Accredited List".';
+    recClass = 'danger';
+    recIcon = '<i class="fas fa-times-circle"></i>';
   } else if(accreditedHits.length && taHits.length){
-    recText = '✅ Recommended: Appears in credible indexes and is included in a Transformative Agreement.';
-    recClass = 'accredited';
+    recText = 'Recommended: Appears in credible indexes and is included in a Transformative Agreement.';
+    recClass = '';
+    recIcon = '<i class="fas fa-check-circle"></i>';
   } else if(accreditedHits.length){
-    recText = '✅ Recommended: Appears in credible indexes.';
-    recClass = 'accredited';
+    recText = 'Recommended: Appears in credible indexes.';
+    recClass = '';
+    recIcon = '<i class="fas fa-check-circle"></i>';
   } else if(taHits.length){
-    recText = '⚠️ Verify: Not in 2025 accredited lists, but appears in a Transformative Agreement.';
-    recClass = 'transformative';
+    recText = 'Verify: Not in 2025 accredited lists, but appears in a Transformative Agreement. Please consult with your Faculty Librarian.';
+    recClass = 'warning';
+    recIcon = '<i class="fas fa-exclamation-circle"></i>';
   } else {
-    recText = '⚠️ Not found in key lists — please verify with your Faculty Librarian.';
-    recClass = 'live';
+    recText = 'Not found in key lists — please verify with your Faculty Librarian.';
+    recClass = 'warning';
+    recIcon = '<i class="fas fa-exclamation-circle"></i>';
   }
 
-  // Build report sections as separate tables
-  const parts = [];
-
-  // Journal Identification - Use proper publisher info from our extracted data
-  const idTitle = accreditedHits[0]?.title || taHits[0]?.title || (qInput ? qInput.value : '') || query;
-  const idPublisher = accreditedHits[0]?.publisher || taHits[0]?.publisher || live.crossref?.publisher || live.openalex?.publisher || '';
-  const idISSN = [accreditedHits[0]?.issn, accreditedHits[0]?.eissn, taHits[0]?.eissn].filter(Boolean).join(' | ');
-  
-  const identificationRows = [
-    ['Journal Title', idTitle],
-    ['ISSN', idISSN || 'N/A']
-  ];
-  
-  // Only add Publisher field if we have data
-  if (idPublisher) {
-    identificationRows.push(['Publisher', idPublisher]);
-  }
-  
-  // Add other fields if available
-  if (accreditedHits[0]?.lastReview) {
-    identificationRows.push(['Last Review', accreditedHits[0].lastReview]);
-  }
-  
-  if (accreditedHits[0]?.frequency) {
-    identificationRows.push(['Frequency', accreditedHits[0].frequency]);
-  }
-  
-  if (accreditedHits[0]?.international) {
-    identificationRows.push(['International', accreditedHits[0].international]);
-  }
-  
-  parts.push({ title: 'Journal Identification', rows: identificationRows });
-
-  // Accreditation Checks
-  const accRows = [
-    ['Found in 2025 Accredited Lists', accreditedHits.length ? `Yes (${foundInLists.join(', ')})` : 'No'],
-    ['Removed from Previous Accredited List', removedMatch ? 'Yes (historical)' : 'No']
-  ];
-  parts.push({ title: 'Accreditation Checks', rows: accRows });
-
-  // Transformative Agreements - IMPROVED: Show "Not applicable" when not found
-  const taRows = [];
-  if(taHits.length){
-    const t = taHits[0];
-    taRows.push(['Transformative', t.included || 'Yes']);
-    if(t.duration) taRows.push(['Duration', t.duration]);
-    if(t.oaStatus) taRows.push(['Open Access Status', t.oaStatus]);
-    if(t.publisher) taRows.push(['Publisher', t.publisher]);
-    if(t.notes) taRows.push(['Notes', t.notes]);
-    if(t.subject) taRows.push(['Subject', t.subject]);
-  } else {
-    taRows.push(['Transformative', 'Not applicable']);
-  }
-  parts.push({ title: 'Transformative Agreements', rows: taRows });
-
-  // Live Lookups
-  const liveRows = [];
-  liveRows.push(['CrossRef', live.crossref ? `Found | ${live.crossref.issn ? 'ISSN(s): ' + live.crossref.issn : ''} ${live.crossref?.license ? '| License: ' + live.crossref.license : ''}` : 'No/Unavailable']);
-  liveRows.push(['OpenAlex', live.openalex ? `Found | ${live.openalex.issn_l ? 'ISSN-L: ' + live.openalex.issn_l : ''} ${live.openalex?.oa_status ? '| OA: ' + live.openalex.oa_status : ''}` : 'No/Unavailable']);
-  liveRows.push(['PubMed (indexed article count)', Number.isFinite(live.pubmedCount) ? String(live.pubmedCount) : 'Not available']);
-  parts.push({ title: 'Live Lookups', rows: liveRows });
-
-  // Render parts to DOM
+  // Build the report using the new structure
   if (reportContainer) {
     reportContainer.innerHTML = '';
-    for(const part of parts){
-      const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      thead.innerHTML = `<tr><th colspan="2">${escapeHtml(part.title)}</th></tr>`;
-      table.appendChild(thead);
-      const tbody = document.createElement('tbody');
-      for(const r of part.rows){
-        const tr = document.createElement('tr');
-        const tdKey = document.createElement('td');
-        tdKey.style.width = '30%';
-        tdKey.textContent = r[0];
-        const tdVal = document.createElement('td');
-        tdVal.innerHTML = r[1] || '';
-        tr.appendChild(tdKey);
-        tr.appendChild(tdVal);
-        tbody.appendChild(tr);
-      }
-      table.appendChild(tbody);
-      reportContainer.appendChild(table);
-    }
-
-    // Add Recommendation as a special section
-    const recContainer = document.createElement('div');
-    recContainer.className = `rec ${recClass}`;
-    recContainer.style.display = 'block';
-    recContainer.style.marginTop = '20px';
-    recContainer.style.padding = '15px';
-    recContainer.style.borderRadius = '8px';
-    recContainer.style.fontWeight = 'bold';
-    recContainer.style.border = '1px solid transparent';
-    recContainer.innerHTML = `<h3 style="margin:0 0 10px 0;">Recommendation</h3><p style="margin:0; font-size:16px;">${recText}</p>`;
     
+    // Journal Identification Section
+    const idTitle = accreditedHits[0]?.title || taHits[0]?.title || query;
+    const idPublisher = accreditedHits[0]?.publisher || taHits[0]?.publisher || live.crossref?.publisher || live.openalex?.publisher || '';
+    
+    // Collect all ISSNs and deduplicate them
+    const allIssns = [
+      accreditedHits[0]?.issn, 
+      accreditedHits[0]?.eissn, 
+      taHits[0]?.eissn,
+      ...(live.crossref?.issn ? live.crossref.issn.split(' / ') : [])
+    ].filter(Boolean);
+    const uniqueIssns = deduplicateArray(allIssns);
+    const idISSN = uniqueIssns.join(' / ') || 'N/A';
+    
+    const journalSection = document.createElement('div');
+    journalSection.className = 'report-section';
+    journalSection.innerHTML = `
+      <div class="report-header">Journal Identification</div>
+      <div class="report-content">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Journal Title</div>
+            <div class="info-value">${escapeHtml(idTitle)}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">ISSN</div>
+            <div class="info-value">${escapeHtml(idISSN)}</div>
+          </div>
+          ${idPublisher ? `
+          <div class="info-item">
+            <div class="info-label">Publisher</div>
+            <div class="info-value">${escapeHtml(idPublisher)}</div>
+          </div>
+          ` : ''}
+          ${accreditedHits[0]?.lastReview ? `
+          <div class="info-item">
+            <div class="info-label">Last Review</div>
+            <div class="info-value">${escapeHtml(accreditedHits[0].lastReview)}</div>
+          </div>
+          ` : ''}
+          ${accreditedHits[0]?.frequency ? `
+          <div class="info-item">
+            <div class="info-label">Frequency</div>
+            <div class="info-value">${escapeHtml(accreditedHits[0].frequency)}</div>
+          </div>
+          ` : ''}
+          ${accreditedHits[0]?.international ? `
+          <div class="info-item">
+            <div class="info-label">International</div>
+            <div class="info-value">${escapeHtml(accreditedHits[0].international)}</div>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    reportContainer.appendChild(journalSection);
+    
+    // Accreditation Checks Section
+    const accreditationSection = document.createElement('div');
+    accreditationSection.className = 'report-section';
+    accreditationSection.innerHTML = `
+      <div class="report-header">Accreditation Checks</div>
+      <div class="report-content">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Found in 2025 Accredited Lists</div>
+            <div class="info-value ${accreditedHits.length ? 'positive' : ''}">
+              ${accreditedHits.length ? `Yes (${foundInLists.join(', ')})` : 'No'}
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Removed from Previous Accredited List</div>
+            <div class="info-value ${removedMatch ? 'negative' : ''}">
+              ${removedMatch ? 'Yes' : 'No'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    reportContainer.appendChild(accreditationSection);
+    
+    // Transformative Agreements Section
+    const transformativeSection = document.createElement('div');
+    transformativeSection.className = 'report-section';
+    transformativeSection.innerHTML = `
+      <div class="report-header">Transformative Agreements</div>
+      <div class="report-content">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Transformative</div>
+            <div class="info-value">${taHits.length ? (taHits[0].included || 'Yes') : 'Not applicable'}</div>
+          </div>
+          ${taHits.length && taHits[0].publisher ? `
+          <div class="info-item">
+            <div class="info-label">Publisher</div>
+            <div class="info-value">${escapeHtml(taHits[0].publisher)}</div>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    reportContainer.appendChild(transformativeSection);
+    
+    // Live Lookups Section
+    const liveSection = document.createElement('div');
+    liveSection.className = 'report-section';
+    liveSection.innerHTML = `
+      <div class="report-header">Live Lookups</div>
+      <div class="report-content">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">CrossRef</div>
+            <div class="info-value">${live.crossref ? `Found | ${live.crossref.issn ? 'ISSN(s): ' + live.crossref.issn : ''} ${live.crossref?.license ? '| License: ' + live.crossref.license : ''}` : 'No/Unavailable'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">OpenAlex</div>
+            <div class="info-value">${live.openalex ? `Found | ${live.openalex.issn_l ? 'ISSN-L: ' + live.openalex.issn_l : ''} ${live.openalex?.oa_status ? '| OA: ' + live.openalex.oa_status : ''}` : 'No/Unavailable'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">PubMed (indexed article count)</div>
+            <div class="info-value">${Number.isFinite(live.pubmedCount) ? String(live.pubmedCount) : 'Not available'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+    reportContainer.appendChild(liveSection);
+    
+    // Recommendation Section
+    const recContainer = document.createElement('div');
+    recContainer.className = `recommendation ${recClass}`;
+    recContainer.innerHTML = `
+      <h3>${recIcon} Recommendation</h3>
+      <p>${recText}</p>
+    `;
     reportContainer.appendChild(recContainer);
   }
 
