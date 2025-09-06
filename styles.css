@@ -270,6 +270,35 @@ footer {
     font-size: 0.9rem;
 }
 
+/* Recommendation Section */
+.recommendation {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #f8fafc;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--dark);
+}
+
+.recommendation p {
+    margin: 8px 0;
+}
+
+.recommendation strong {
+    color: var(--primary);
+}
+
+.recommendation .tag {
+    background-color: var(--primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-right: 6px;
+}
+
 @media (max-width: 768px) {
     .results-container {
         grid-template-columns: 1fr;
