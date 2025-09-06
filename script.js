@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultsContainer = document.getElementById('resultsContainer');
     const copyReportBtn = document.getElementById('copyReportBtn');
     const downloadReportBtn = document.getElementById('downloadReportBtn');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
     const showRemovedBtn = document.getElementById('showRemovedBtn');
     const copyRemovedBtn = document.getElementById('copyRemovedBtn');
 
@@ -110,12 +111,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     const titleCol = ['journal title', 'title', 'journal', 'name'].findIndex(h => headers.includes(h));
                     const issnCol = ['issn', 'pissn', 'print issn'].findIndex(h => headers.includes(h));
                     const eissnCol = ['eissn', 'electronic issn', 'online issn'].findIndex(h => headers.includes(h));
+                    const publisherCol = ['publisher details', 'publisher', 'publisher name'].findIndex(h => headers.includes(h));
+                    const publisher2Col = ['publisher details2', 'society', 'affiliated society'].findIndex(h => headers.includes(h));
+                    const webCol = ['web address', 'url', 'website', 'link'].findIndex(h => headers.includes(h));
 
                     journalLists[key] = rows.slice(1).map(r => ({
                         title: r[titleCol !== -1 ? titleCol : 0]?.trim() || 'Unknown Journal',
                         titleNorm: normalize(r[titleCol !== -1 ? titleCol : 0]),
                         issn: r[issnCol !== -1 ? issnCol : -1]?.trim() || '',
-                        eissn: r[eissnCol !== -1 ? eissnCol : -1]?.trim() || ''
+                        eissn: r[eissnCol !== -1 ? eissnCol : -1]?.trim() || '',
+                        publisher: r[publisherCol !== -1 ? publisherCol : -1]?.trim() || '',
+                        society: r[publisher2Col !== -1 ? publisher2Col : -1]?.trim() || '',
+                        url: r[webCol !== -1 ? webCol : -1]?.trim() || ''
                     }));
                 } else {
                     journalLists[key] = lines.map(l => {
@@ -124,7 +131,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             title: parts[0] || l,
                             titleNorm: normalize(parts[0] || l),
                             issn: parts[1] || '',
-                            eissn: parts[2] || ''
+                            eissn: parts[2] || '',
+                            publisher: parts[3] || '',
+                            society: parts[4] || '',
+                            url: ''
                         };
                     });
                 }
@@ -319,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Publisher</div>
-                        <div class="info-value">${taMatches.length ? taMatches[0].publisher || 'Not specified' : 'Not specified'}</div>
+                        <div class="info-value">${sample?.publisher || 'Not specified'}${sample?.society ? `<br><small>${sample.society}</small>` : ''}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Impact Factor / CiteScore</div>
@@ -332,6 +342,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="info-item">
                         <div class="info-label">Indexed In</div>
                         <div class="info-value">${pubmed ? 'PubMed, Scopus, DOAJ' : 'Not Indexed'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Website</div>
+                        <div class="info-value">${sample?.url ? `<a href="${sample.url}" target="_blank">${sample.url}</a>` : 'N/A'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Last Updated</div>
@@ -397,6 +411,16 @@ document.addEventListener('DOMContentLoaded', function () {
         a.download = 'journal-report.txt';
         a.click();
         URL.revokeObjectURL(url);
+    });
+
+    downloadPdfBtn.addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const text = resultsContainer.innerText;
+        const lines = doc.splitTextToSize(text, 180);
+        doc.setFontSize(12);
+        doc.text(lines, 15, 20);
+        doc.save('journal-report.pdf');
     });
 
     showRemovedBtn.addEventListener('click', () => {
