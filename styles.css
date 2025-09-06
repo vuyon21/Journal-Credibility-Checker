@@ -7,7 +7,7 @@
     --danger: #ef4444;
     --light: #f8fafc;
     --dark: #1e293b;
-    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -34,7 +34,7 @@ body {
     background: linear-gradient(135deg, var(--primary), #1d4ed8);
     color: white;
     padding: 25px 20px;
-    border-radius: 10px;
+    border-radius: 10px 10px 0 0;
     margin-bottom: 25px;
     box-shadow: var(--card-shadow);
 }
@@ -115,11 +115,19 @@ button:hover {
     background-color: #0da271;
 }
 
-/* Results */
+/* Results (initially hidden) */
 .results-container {
-    display: grid;
+    display: none;
+    opacity: 0;
+    animation: fadeIn 0.4s forwards;
     grid-template-columns: 1fr 1fr;
     gap: 25px;
+    margin-bottom: 25px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .card {
@@ -165,6 +173,16 @@ button:hover {
 .status-approved {
     background-color: #d1fae5;
     color: #065f46;
+}
+
+.status-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-danger {
+    background-color: #fee2e2;
+    color: #b91c1c;
 }
 
 .info-grid {
