@@ -270,6 +270,37 @@ footer {
     font-size: 0.9rem;
 }
 
+/* Summary Report Card */
+.summary-card {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #f8fafc;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--dark);
+}
+
+.summary-card h3 {
+    margin-top: 0;
+    color: var(--primary);
+    font-size: 1.2rem;
+}
+
+.summary-card p {
+    margin: 8px 0;
+}
+
+.summary-card .tag {
+    background-color: var(--success);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-right: 6px;
+}
+
 @media (max-width: 768px) {
     .results-container {
         grid-template-columns: 1fr;
