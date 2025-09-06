@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // File names for accredited lists
     const LIST_FILES = {
-        dhet: 'DHET_2025.txt',
+        dhet: 'DHET_2025.csv',
+        dhet: 'DHET_2_2025.csv',
         doaj: 'DOAJ_2025.csv',
         ibss: 'IBSS_2025.csv',
         norwegian: 'NORWEGIAN_2025.csv',
@@ -112,31 +113,38 @@ document.addEventListener('DOMContentLoaded', function () {
                     const issnCol = ['issn', 'pissn', 'print issn'].findIndex(h => headers.includes(h));
                     const eissnCol = ['eissn', 'electronic issn', 'online issn'].findIndex(h => headers.includes(h));
                     const publisherCol = ['publisher details', 'publisher', 'publisher name'].findIndex(h => headers.includes(h));
-                    const publisher2Col = ['publisher details2', 'society', 'affiliated society'].findIndex(h => headers.includes(h));
                     const webCol = ['web address', 'url', 'website', 'link'].findIndex(h => headers.includes(h));
 
-                    journalLists[key] = rows.slice(1).map(r => ({
-                        title: r[titleCol !== -1 ? titleCol : 0]?.trim() || 'Unknown Journal',
-                        titleNorm: normalize(r[titleCol !== -1 ? titleCol : 0]),
-                        issn: r[issnCol !== -1 ? issnCol : -1]?.trim() || '',
-                        eissn: r[eissnCol !== -1 ? eissnCol : -1]?.trim() || '',
-                        publisher: r[publisherCol !== -1 ? publisherCol : -1]?.trim() || '',
-                        society: r[publisher2Col !== -1 ? publisher2Col : -1]?.trim() || '',
-                        url: r[webCol !== -1 ? webCol : -1]?.trim() || ''
-                    }));
+                    journalLists[key] = rows.slice(1).map(r => {
+                        const obj = {};
+                        if (titleCol !== -1) obj.title = r[titleCol]?.trim() || '';
+                        if (issnCol !== -1) obj.issn = r[issnCol]?.trim() || '';
+                        if (eissnCol !== -1) obj.eissn = r[eissnCol]?.trim() || '';
+                        if (publisherCol !== -1) obj.publisher = r[publisherCol]?.trim() || '';
+                        if (webCol !== -1) obj.url = r[webCol]?.trim() || '';
+
+                        // Only include fields that have data
+                        return {
+                            title: obj.title,
+                            titleNorm: normalize(obj.title),
+                            issn: obj.issn,
+                            eissn: obj.eissn,
+                            publisher: obj.publisher,
+                            url: obj.url
+                        };
+                    }).filter(j => j.title); // Remove empty entries
                 } else {
                     journalLists[key] = lines.map(l => {
                         const parts = l.split('|').map(p => p.trim());
                         return {
-                            title: parts[0] || l,
-                            titleNorm: normalize(parts[0] || l),
+                            title: parts[0] || '',
+                            titleNorm: normalize(parts[0] || ''),
                             issn: parts[1] || '',
                             eissn: parts[2] || '',
                             publisher: parts[3] || '',
-                            society: parts[4] || '',
                             url: ''
                         };
-                    });
+                    }).filter(j => j.title);
                 }
             } catch (e) {
                 journalLists[key] = [];
@@ -201,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         issn: r[issnCol] || '',
                         yearRemoved: r[yearCol] || '',
                         lastReviewDate: r[lastReviewCol] || ''
-                    }));
+                    })).filter(j => j.title);
                 }
             }
         } catch (e) {
@@ -325,11 +333,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">ISSN</div>
-                        <div class="info-value">${sample?.issn || 'N/A'}<br>${sample?.eissn ? `<small>eISSN: ${sample.eissn}</small>` : ''}</div>
+                        <div class="info-value">${sample?.issn || 'N/A'}${sample?.eissn ? `<br><small>eISSN: ${sample.eissn}</small>` : ''}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Publisher</div>
-                        <div class="info-value">${sample?.publisher || 'Not specified'}${sample?.society ? `<br><small>${sample.society}</small>` : ''}</div>
+                        <div class="info-value">${sample?.publisher || 'Not specified'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Impact Factor / CiteScore</div>
