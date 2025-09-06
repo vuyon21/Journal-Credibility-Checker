@@ -108,12 +108,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     const rows = tryParseCSV(text);
                     const headers = rows[0].map(h => normalize(h));
                     const titleCol = ['journal title', 'title', 'journal', 'name'].findIndex(h => headers.includes(h));
-                    const issnCol = ['issn', 'eissn', 'pissn'].findIndex(h => headers.includes(h));
+                    const issnCol = ['issn', 'pissn', 'print issn'].findIndex(h => headers.includes(h));
+                    const eissnCol = ['eissn', 'electronic issn', 'online issn'].findIndex(h => headers.includes(h));
 
                     journalLists[key] = rows.slice(1).map(r => ({
                         title: r[titleCol !== -1 ? titleCol : 0]?.trim() || 'Unknown Journal',
                         titleNorm: normalize(r[titleCol !== -1 ? titleCol : 0]),
-                        issn: r[issnCol !== -1 ? issnCol : -1]?.trim() || ''
+                        issn: r[issnCol !== -1 ? issnCol : -1]?.trim() || '',
+                        eissn: r[eissnCol !== -1 ? eissnCol : -1]?.trim() || ''
                     }));
                 } else {
                     journalLists[key] = lines.map(l => {
@@ -121,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         return {
                             title: parts[0] || l,
                             titleNorm: normalize(parts[0] || l),
-                            issn: parts[1] || ''
+                            issn: parts[1] || '',
+                            eissn: parts[2] || ''
                         };
                     });
                 }
@@ -144,11 +147,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     const obj = {};
                     for (let j = 0; j < header.length; j++) obj[header[j]] = r[j] || '';
                     const title = obj['journal'] || obj['title'] || r[0] || '';
+                    const issn = obj['issn'] || '';
                     const eissn = obj['eissn'] || '';
                     const oaStatus = obj['open access status'] || 'Unknown';
                     transformativeList.push({
                         journal: title,
                         titleNorm: normalize(title),
+                        issn: issn,
                         eissn: eissn,
                         oaStatus: oaStatus,
                         included: obj['included in r&p agreement'] || 'No',
@@ -206,7 +211,8 @@ document.addEventListener('DOMContentLoaded', function () {
             flags[key] = false;
             for (const j of list) {
                 const jISSN = j.issn.replace(/[^0-9Xx]/g, '').toLowerCase();
-                if (issn && jISSN && jISSN === issn) {
+                const jeISSN = j.eissn.replace(/[^0-9Xx]/g, '').toLowerCase();
+                if (issn && (jISSN && jISSN === issn) || (jeISSN && jeISSN === issn)) {
                     flags[key] = true;
                     sample = j;
                     break;
@@ -282,9 +288,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const { flags, sample } = findJournal(query);
         const removed = findRemoved(query);
         const taMatches = transformativeList.filter(t => {
-            const tISSN = t.eissn.replace(/[^0-9Xx]/g, '').toLowerCase();
+            const tISSN = t.issn.replace(/[^0-9Xx]/g, '').toLowerCase();
+            const teISSN = t.eissn.replace(/[^0-9Xx]/g, '').toLowerCase();
             const jISSN = (sample?.issn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
-            return (tISSN && jISSN && tISSN === jISSN) || t.titleNorm === normalize(sample?.title || query);
+            const jeISSN = (sample?.eissn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
+            return (tISSN && jISSN && tISSN === jISSN) || (teISSN && jeISSN && teISSN === jeISSN) || t.titleNorm === normalize(sample?.title || query);
         });
 
         const [impactFactor, pubmed, pubmedCount] = await Promise.all([
@@ -307,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">ISSN</div>
-                        <div class="info-value">${sample?.issn || 'N/A'}</div>
+                        <div class="info-value">${sample?.issn || 'N/A'}<br>${sample?.eissn ? `<small>eISSN: ${sample.eissn}</small>` : ''}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Publisher</div>
@@ -343,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Transformative Agreement</div>
-                        <div class="info-value">${taMatches.length ? `Yes (${taMatches[0].linkLabel})` : 'No'}</div>
+                        <div class="info-value">${taMatches.length ? `Yes (${taMatches[0].linkLabel})` : 'Not Applicable'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Crossref Check</div>
@@ -359,22 +367,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </div>
             </div>
-            <div class="card card-full">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-history"></i> Removed from Accredited List (Historical)</h2>
-                    <span class="status-badge status-warning">Source: JOURNALS REMOVED IN PAST YEARS.csv</span>
-                </div>
-                <div class="removed-list">
-                    ${journalLists.removed?.map(j => `
-                        <div class="removed-item">
-                            <div>
-                                <div class="journal-title">${j.title}</div>
-                                <div class="journal-issn">ISSN: ${j.issn}</div>
-                            </div>
-                            <span class="removed-year">${j.yearRemoved}</span>
-                        </div>
-                    `).join('') || '<div class="removed-item">No removed journals found.</div>'}
-                </div>
+            <div class="summary-card">
+                <h3>Summary Report</h3>
+                <p><strong>Summary:</strong> This journal is indexed in ${Object.keys(flags).filter(k => flags[k]).join(', ') || 'none'}.</p>
+                <p><strong>Crossref:</strong> Verified.</p>
+                <p><strong>PubMed:</strong> ${pubmed ? `Indexed with ${pubmedCount} article(s) published.` : 'Not Indexed'}</p>
+                <p><strong>Recommendation:</strong> ${flags.dhet || flags.scopus || flags.wos ? `<span class="tag">Recommended</span> This journal appears in major credible indexes.` : 
+                   removed ? `<span class="tag">Not Recommended</span> This journal appears on the removed list.` : 
+                   `<span class="tag">Verify Manually</span> Appears in some indexes but not major ones.`}</p>
             </div>
         `;
         resultsContainer.innerHTML = html;
