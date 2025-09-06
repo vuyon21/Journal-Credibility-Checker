@@ -12,14 +12,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // GitHub base URL
     const GITHUB_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
 
-    // File names for accredited lists
+    // File names for accredited lists — ALL .CSV
     const LIST_FILES = {
         dhet: 'DHET_2025.csv',
-        dhet: 'DHET_2_2025.csv',
+        dhet2: 'DHET_2_2025.csv',
         doaj: 'DOAJ_2025.csv',
         ibss: 'IBSS_2025.csv',
         norwegian: 'NORWEGIAN_2025.csv',
-        other: 'OTHER INDEXED JOURNALS_2025.txt',
+        other: 'OTHER INDEXED JOURNALS_2025.csv',
         scielo: 'SCIELO SA_2025.csv',
         scopus: 'SCOPUS_2025.csv',
         wos: 'WOS_2025.csv',
@@ -123,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (publisherCol !== -1) obj.publisher = r[publisherCol]?.trim() || '';
                         if (webCol !== -1) obj.url = r[webCol]?.trim() || '';
 
-                        // Only include fields that have data
                         return {
                             title: obj.title,
                             titleNorm: normalize(obj.title),
@@ -131,18 +130,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             eissn: obj.eissn,
                             publisher: obj.publisher,
                             url: obj.url
-                        };
-                    }).filter(j => j.title); // Remove empty entries
-                } else {
-                    journalLists[key] = lines.map(l => {
-                        const parts = l.split('|').map(p => p.trim());
-                        return {
-                            title: parts[0] || '',
-                            titleNorm: normalize(parts[0] || ''),
-                            issn: parts[1] || '',
-                            eissn: parts[2] || '',
-                            publisher: parts[3] || '',
-                            url: ''
                         };
                     }).filter(j => j.title);
                 }
@@ -310,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const teISSN = t.eissn.replace(/[^0-9Xx]/g, '').toLowerCase();
             const jISSN = (sample?.issn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
             const jeISSN = (sample?.eissn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
-            return (tISSN && jISSN && tISSN === jISSN) || (teISSN && jeISSN && teISSN === jeISSN) || t.titleNorm === normalize(sample?.title || query);
+            return (tISSN && jISSN && tISSN === jISSN) || (teISSN && jeISSN && teISSN === jeISSJ) || t.titleNorm === normalize(sample?.title || query);
         });
 
         const [impactFactor, pubmed, pubmedCount] = await Promise.all([
