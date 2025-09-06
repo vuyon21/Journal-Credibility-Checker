@@ -293,30 +293,6 @@ document.addEventListener('DOMContentLoaded', function () {
             fetchPubMedArticleCount(query)
         ]);
 
-        // Build Recommendation
-        const indexedIn = Object.keys(flags).filter(k => flags[k]).join(', ');
-        const taPublishers = taMatches.map(t => t.publisher).filter(Boolean).join(', ') || 'None';
-
-        let recommendationHTML = `
-            <div class="recommendation">
-                <p><strong>Summary:</strong> This journal is indexed in <strong>${indexedIn || 'none'}</strong>.</p>
-                ${taMatches.length ? `<p><strong>Transformative Agreement:</strong> Yes, with <strong>${taPublishers}</strong>. Authors can publish OA without APCs.</p>` : ''}
-                <p><strong>Crossref:</strong> Verified.</p>
-                <p><strong>PubMed:</strong> Indexed with <strong>${pubmedCount} article(s)</strong> published.</p>
-                <p><strong>Recommendation:</strong> `;
-
-        if (removed) {
-            recommendationHTML += `<span class="tag" style="background-color:var(--danger)">Not Recommended</span> This journal appears on the removed list.</p>`;
-        } else if (flags.dhet || flags.scopus || flags.wos) {
-            recommendationHTML += `<span class="tag" style="background-color:var(--success)">Recommended</span> This journal appears in major credible indexes.</p>`;
-        } else if (indexedIn) {
-            recommendationHTML += `<span class="tag" style="background-color:var(--warning)">Verify Manually</span> Appears in some indexes but not major ones.</p>`;
-        } else {
-            recommendationHTML += `<span class="tag" style="background-color:var(--danger)">Not Recommended</span> Not found in key lists.</p>`;
-        }
-
-        recommendationHTML += '</div>';
-
         // Build HTML
         const html = `
             <div class="card">
@@ -350,10 +326,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="info-value">${pubmed ? 'PubMed, Scopus, DOAJ' : 'Not Indexed'}</div>
                     </div>
                     <div class="info-item">
-                        <div class="info-label">Transformative Agreement</div>
-                        <div class="info-value">${taMatches.length ? 'Yes' : 'No'}</div>
-                    </div>
-                    <div class="info-item">
                         <div class="info-label">Last Updated</div>
                         <div class="info-value">${sample?.lastReview || '2025-06-15'}</div>
                     </div>
@@ -371,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Transformative Agreement</div>
-                        <div class="info-value">${taMatches.length ? 'Yes' : 'No'}</div>
+                        <div class="info-value">${taMatches.length ? `Yes (${taMatches[0].linkLabel})` : 'No'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Crossref Check</div>
@@ -384,10 +356,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="info-item">
                         <div class="info-label">OpenAlex Check</div>
                         <div class="info-value"><i class="fas fa-check-circle" style="color: #10b981;"></i> Verified</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">DOAJ</div>
-                        <div class="info-value"><i class="fas fa-${flags.doaj ? 'check-circle' : 'times-circle'}" style="color: ${flags.doaj ? '#10b981' : '#ef4444'};"></i> ${flags.doaj ? 'Listed' : 'Not Listed'}</div>
                     </div>
                 </div>
             </div>
@@ -410,7 +378,6 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
         resultsContainer.innerHTML = html;
-        resultsContainer.insertAdjacentHTML('beforeend', recommendationHTML);
     }
 
     // === BUTTONS ===
