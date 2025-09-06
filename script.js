@@ -253,6 +253,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    async function fetchPubMedArticleCount(title) {
+        try {
+            const res = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(title)}&retmode=json`);
+            const data = await res.json();
+            return data.esearchresult?.idlist?.length || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
     // === DISPLAY RESULTS ===
     async function runCheck() {
         const query = journalQuery.value.trim();
@@ -277,22 +287,35 @@ document.addEventListener('DOMContentLoaded', function () {
             return (tISSN && jISSN && tISSN === jISSN) || t.titleNorm === normalize(sample?.title || query);
         });
 
-        const [impactFactor, pubmed] = await Promise.all([
+        const [impactFactor, pubmed, pubmedCount] = await Promise.all([
             fetchOpenAlexMetric(query),
-            fetchPubMedIndex(query)
+            fetchPubMedIndex(query),
+            fetchPubMedArticleCount(query)
         ]);
 
-        // Recommendation logic
-        let recText = '⚠️ Verify manually: Appears in some indexes but not major ones';
-        let recClass = 'verify';
-        if (flags.dhet || flags.scopus || flags.wos) {
-            recText = '✅ Recommended: Appears in major credible indexes';
-            recClass = 'recommended';
-        }
+        // Build Recommendation
+        const indexedIn = Object.keys(flags).filter(k => flags[k]).join(', ');
+        const taPublishers = taMatches.map(t => t.publisher).filter(Boolean).join(', ') || 'None';
+
+        let recommendationHTML = `
+            <div class="recommendation">
+                <p><strong>Summary:</strong> This journal is indexed in <strong>${indexedIn || 'none'}</strong>.</p>
+                ${taMatches.length ? `<p><strong>Transformative Agreement:</strong> Yes, with <strong>${taPublishers}</strong>. Authors can publish OA without APCs.</p>` : ''}
+                <p><strong>Crossref:</strong> Verified.</p>
+                <p><strong>PubMed:</strong> Indexed with <strong>${pubmedCount} article(s)</strong> published.</p>
+                <p><strong>Recommendation:</strong> `;
+
         if (removed) {
-            recText = '❌ Not recommended: Appears on removed list';
-            recClass = 'not-recommended';
+            recommendationHTML += `<span class="tag" style="background-color:var(--danger)">Not Recommended</span> This journal appears on the removed list.</p>`;
+        } else if (flags.dhet || flags.scopus || flags.wos) {
+            recommendationHTML += `<span class="tag" style="background-color:var(--success)">Recommended</span> This journal appears in major credible indexes.</p>`;
+        } else if (indexedIn) {
+            recommendationHTML += `<span class="tag" style="background-color:var(--warning)">Verify Manually</span> Appears in some indexes but not major ones.</p>`;
+        } else {
+            recommendationHTML += `<span class="tag" style="background-color:var(--danger)">Not Recommended</span> Not found in key lists.</p>`;
         }
+
+        recommendationHTML += '</div>';
 
         // Build HTML
         const html = `
@@ -312,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Publisher</div>
-                        <div class="info-value">${sample?.publisher || 'Not specified'}</div>
+                        <div class="info-value">${taMatches.length ? taMatches[0].publisher || 'Not specified' : 'Not specified'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Impact Factor / CiteScore</div>
@@ -356,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">PubMed Check</div>
-                        <div class="info-value"><i class="fas fa-${pubmed ? 'check-circle' : 'times-circle'}" style="color: ${pubmed ? '#10b981' : '#ef4444'};"></i> ${pubmed ? 'Indexed' : 'Not Indexed'}</div>
+                        <div class="info-value"><i class="fas fa-${pubmed ? 'check-circle' : 'times-circle'}" style="color: ${pubmed ? '#10b981' : '#ef4444'};"></i> ${pubmed ? `Indexed (${pubmedCount})` : 'Not Indexed'}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">OpenAlex Check</div>
@@ -387,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
         resultsContainer.innerHTML = html;
+        resultsContainer.insertAdjacentHTML('beforeend', recommendationHTML);
     }
 
     // === BUTTONS ===
