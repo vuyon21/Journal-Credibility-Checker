@@ -359,14 +359,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="info-value">${sample?.url ? `<a href="${sample.url}" target="_blank">${sample.url}</a>` : 'N/A'}</div>
                     </div>
                     <div class="info-item">
-                        <div class="info-label">Country</div>
-                        <div class="info-value">${sample?.country || 'N/A'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Language</div>
-                        <div class="info-value">${sample?.language || 'N/A'}</div>
-                    </div>
-                    <div class="info-item">
                         <div class="info-label">Last Updated</div>
                         <div class="info-value">${sample?.lastReview || '2025-06-15'}</div>
                     </div>
@@ -384,16 +376,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Transformative Agreement</div>
-                        <div class="info-value">${taMatches.length ? `Yes (${taMatches[0].linkLabel})` : 'Not Applicable'}</div>
+                        <div class="info-value">${taMatches.length ? `<a href="${taMatches[0].linkUrl}" target="_blank" rel="noopener noreferrer">Yes (${taMatches[0].linkLabel})</a>` : 'Not Applicable'}</div>
                     </div>
-                    ${taMatches.length ? `<div class="info-item">
-                        <div class="info-label">Agreement Duration</div>
-                        <div class="info-value">${taMatches[0].duration || 'N/A'}</div>
-                    </div>` : ''}
-                    ${taMatches.length ? `<div class="info-item">
-                        <div class="info-label">Subject</div>
-                        <div class="info-value">${taMatches[0].subject || 'N/A'}</div>
-                    </div>` : ''}
                     <div class="info-item">
                         <div class="info-label">Crossref Check</div>
                         <div class="info-value"><i class="fas fa-check-circle" style="color: #10b981;"></i> Verified</div>
