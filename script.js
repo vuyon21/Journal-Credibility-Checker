@@ -164,16 +164,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     const issn = obj['issn'] || '';
                     const eissn = obj['eissn'] || '';
                     const oaStatus = obj['open access status'] || 'Unknown';
+                    const included = obj['included in r&p agreement'] || obj['included in the agreement'] || 'No';
+                    const explanation = obj['explanation if not included'] || '';
+                    const subject = obj['subject'] || '';
+                    const publisher = obj['publisher'] || '';
+                    const duration = obj['agreement duration'] || '';
+
                     transformativeList.push({
                         journal: title,
                         titleNorm: normalize(title),
                         issn: issn,
                         eissn: eissn,
                         oaStatus: oaStatus,
-                        included: obj['included in r&p agreement'] || 'No',
-                        subject: obj['subject'] || '',
-                        publisher: obj['publisher'] || '',
-                        duration: obj['agreement duration'] || '',
+                        included: included,
+                        explanation: explanation,
+                        subject: subject,
+                        publisher: publisher,
+                        duration: duration,
                         linkLabel: file.replace(/\.csv$/i, ''),
                         linkUrl: SANLIC_LINKS[file.replace(/\.csv$/i, '')] || ''
                     });
@@ -352,6 +359,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="info-value">${sample?.url ? `<a href="${sample.url}" target="_blank">${sample.url}</a>` : 'N/A'}</div>
                     </div>
                     <div class="info-item">
+                        <div class="info-label">Country</div>
+                        <div class="info-value">${sample?.country || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Language</div>
+                        <div class="info-value">${sample?.language || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
                         <div class="info-label">Last Updated</div>
                         <div class="info-value">${sample?.lastReview || '2025-06-15'}</div>
                     </div>
@@ -371,6 +386,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="info-label">Transformative Agreement</div>
                         <div class="info-value">${taMatches.length ? `Yes (${taMatches[0].linkLabel})` : 'Not Applicable'}</div>
                     </div>
+                    ${taMatches.length ? `<div class="info-item">
+                        <div class="info-label">Agreement Duration</div>
+                        <div class="info-value">${taMatches[0].duration || 'N/A'}</div>
+                    </div>` : ''}
+                    ${taMatches.length ? `<div class="info-item">
+                        <div class="info-label">Subject</div>
+                        <div class="info-value">${taMatches[0].subject || 'N/A'}</div>
+                    </div>` : ''}
                     <div class="info-item">
                         <div class="info-label">Crossref Check</div>
                         <div class="info-value"><i class="fas fa-check-circle" style="color: #10b981;"></i> Verified</div>
