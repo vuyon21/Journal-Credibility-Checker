@@ -113,6 +113,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     const issnCol = ['issn', 'pissn', 'print issn'].findIndex(h => headers.includes(h));
                     const eissnCol = ['eissn', 'electronic issn', 'online issn'].findIndex(h => headers.includes(h));
                     const publisherCol = ['publisher details', 'publisher', 'publisher name'].findIndex(h => headers.includes(h));
+                    const publisher2Col = ['publisher details2', 'society', 'affiliated society'].findIndex(h => headers.includes(h));
+                    const countryCol = ['country of publication', 'country'].findIndex(h => headers.includes(h));
+                    const languageCol = ['language', 'lang'].findIndex(h => headers.includes(h));
                     const webCol = ['web address', 'url', 'website', 'link'].findIndex(h => headers.includes(h));
 
                     journalLists[key] = rows.slice(1).map(r => {
@@ -121,6 +124,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (issnCol !== -1) obj.issn = r[issnCol]?.trim() || '';
                         if (eissnCol !== -1) obj.eissn = r[eissnCol]?.trim() || '';
                         if (publisherCol !== -1) obj.publisher = r[publisherCol]?.trim() || '';
+                        if (publisher2Col !== -1) obj.publisher2 = r[publisher2Col]?.trim() || '';
+                        if (countryCol !== -1) obj.country = r[countryCol]?.trim() || '';
+                        if (languageCol !== -1) obj.language = r[languageCol]?.trim() || '';
                         if (webCol !== -1) obj.url = r[webCol]?.trim() || '';
 
                         return {
@@ -129,6 +135,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             issn: obj.issn,
                             eissn: obj.eissn,
                             publisher: obj.publisher,
+                            publisher2: obj.publisher2,
+                            country: obj.country,
+                            language: obj.language,
                             url: obj.url
                         };
                     }).filter(j => j.title);
@@ -297,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const teISSN = t.eissn.replace(/[^0-9Xx]/g, '').toLowerCase();
             const jISSN = (sample?.issn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
             const jeISSN = (sample?.eissn || '').replace(/[^0-9Xx]/g, '').toLowerCase();
-            return (tISSN && jISSN && tISSN === jISSN) || (teISSN && jeISSN && teISSN === jeISSJ) || t.titleNorm === normalize(sample?.title || query);
+            return (tISSN && jISSN && tISSN === jISSN) || (teISSN && jeISSN && teISSN === jeISSN) || t.titleNorm === normalize(sample?.title || query);
         });
 
         const [impactFactor, pubmed, pubmedCount] = await Promise.all([
@@ -324,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Publisher</div>
-                        <div class="info-value">${sample?.publisher || 'Not specified'}</div>
+                        <div class="info-value">${sample?.publisher || 'Not specified'}${sample?.publisher2 ? `<br><small>${sample.publisher2}</small>` : ''}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Impact Factor / CiteScore</div>
