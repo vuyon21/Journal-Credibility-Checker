@@ -12,7 +12,7 @@
       <img src="ufs-logo.jpg" alt="UFS logo" class="ufs-logo">
       <div class="title-block">
         <h1>UFS Journal Credibility Checker</h1>
-        <p class="subtitle">Verifies journal credibility using DHET, major indexes and curated lists. Live-lookups possible.</p>
+        <p class="subtitle">Verifies journal credibility using DHET, major indexes and curated lists. Live-lookups included.</p>
       </div>
     </div>
   </header>
@@ -21,7 +21,7 @@
     <section class="search-panel card">
       <div class="search-top">
         <div class="autocomplete" style="flex:1; position:relative;">
-          <input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)" aria-label="Journal title or ISSN">
+          <input id="journal-query" type="text" placeholder="Enter journal title or ISSN" aria-label="Journal title or ISSN">
           <div id="autocomplete-results" class="autocomplete-list" role="listbox"></div>
         </div>
         <div class="actions">
@@ -74,6 +74,11 @@
           <div class="transformative">
             <h3>Transformative Agreement</h3>
             <div id="transformative-info">No match found</div>
+          </div>
+
+          <div class="transformative">
+            <h3>Real-Time Checks</h3>
+            <div id="realtime-info">Checking online sources...</div>
           </div>
         </div>
       </div>
