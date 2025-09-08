@@ -7,63 +7,109 @@
   <link href="styles.css" rel="stylesheet">
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>UFS Journal Credibility Checker</h1>
-    <div class="subtitle">
-      Evaluates journal credibility via accredited lists and live lookups from trusted sources
+  <header class="site-header">
+    <div class="header-inner">
+      <img src="ufs-logo.jpg" alt="UFS logo" class="ufs-logo">
+      <div class="title-block">
+        <h1>UFS Journal Credibility Checker</h1>
+        <p class="subtitle">Verifies journal credibility using DHET, major indexes and curated lists. Live-lookups possible.</p>
+      </div>
     </div>
   </header>
 
-  <div class="card">
-    <div class="search-row">
-      <div class="autocomplete" style="flex:1;position:relative">
-        <input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)">
-        <div id="autocomplete-results"></div>
+  <main class="container">
+    <section class="search-panel card">
+      <div class="search-top">
+        <div class="autocomplete" style="flex:1; position:relative;">
+          <input id="journal-query" type="text" placeholder="Enter journal title or ISSN (e.g. Nature or 0028-0836)" aria-label="Journal title or ISSN">
+          <div id="autocomplete-results" class="autocomplete-list" role="listbox"></div>
+        </div>
+        <div class="actions">
+          <button id="check-btn" class="primary">Check</button>
+          <button id="copy-report-btn" class="secondary">📋 Copy</button>
+          <button id="download-report-btn" class="secondary">💾 Download</button>
+        </div>
       </div>
-      <button id="check-btn">Check</button>
-      <button id="copy-report-btn" class="small-btn">📋 Copy Report</button>
-      <button id="download-report-btn" class="small-btn">💾 Download Report</button>
-    </div>
 
-    <div class="button-row">
-      <button id="show-removed-btn" style="background:var(--removed)">🗑️ Show Removed Journals</button>
-      <button id="copy-removed-btn" style="background:var(--accent)">📋 Copy Removed Journals</button>
-    </div>
+      <div class="secondary-actions">
+        <button id="show-removed-btn" class="muted">🗑️ Show Removed Journals</button>
+        <button id="copy-removed-btn" class="muted">📋 Copy Removed List</button>
+      </div>
 
-    <div class="status loading" id="loading-message">Loading journal data...</div>
-    <div class="status error" id="error-message"></div>
+      <div class="status-row">
+        <div id="loading-message" class="status loading">Loading journal lists…</div>
+        <div id="error-message" class="status error" role="alert" aria-live="polite"></div>
+      </div>
+    </section>
 
-    <pre id="journal-report"></pre>
-    <div id="recommendation" class="recommendation"></div>
+    <section class="results-grid">
+      <div class="card info-card">
+        <div class="card-header">
+          <h2>Journal Information</h2>
+          <span id="info-badge" class="badge neutral">—</span>
+        </div>
+        <div id="journal-info" class="card-body">
+          <div class="field"><span class="label">Journal:</span> <span id="info-title">—</span></div>
+          <div class="field"><span class="label">ISSN:</span> <span id="info-issn">—</span></div>
+          <div class="field"><span class="label">Publisher:</span> <span id="info-publisher">—</span></div>
+          <div class="field"><span class="label">Indexed in:</span> <span id="info-indexes">—</span></div>
+        </div>
+      </div>
 
-    <div class="footer">
-      Note: Always confirm scope match with your discipline before submission.
+      <div class="card status-card">
+        <div class="card-header">
+          <h2>Accreditation Status</h2>
+          <span id="status-badge" class="badge neutral">—</span>
+        </div>
+        <div id="accreditation-body" class="card-body">
+          <div class="status-list">
+            <div class="status-item"><strong>DHET</strong><span id="s-dhet" class="pill nope">—</span></div>
+            <div class="status-item"><strong>Scopus</strong><span id="s-scopus" class="pill nope">—</span></div>
+            <div class="status-item"><strong>WOS</strong><span id="s-wos" class="pill nope">—</span></div>
+            <div class="status-item"><strong>DOAJ</strong><span id="s-doaj" class="pill nope">—</span></div>
+            <div class="status-item"><strong>IBSS</strong><span id="s-ibss" class="pill nope">—</span></div>
+            <div class="status-item"><strong>SciELO</strong><span id="s-scielo" class="pill nope">—</span></div>
+          </div>
+
+          <div class="transformative">
+            <h3>Transformative Agreement</h3>
+            <div id="transformative-info">No match found</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary card">
+      <div class="card-header">
+        <h2>Summary Report</h2>
+        <div class="report-actions">
+          <button id="export-json" class="tiny">Export JSON</button>
+        </div>
+      </div>
+      <div id="summary-body" class="card-body summary-body">
+        <pre id="journal-report" class="report-pre">No report yet. Enter a journal and click <em>Check</em>.</pre>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      <small>Note: Always confirm scope match with your discipline. Data sources are periodically refreshed.</small>
+    </footer>
+  </main>
+
+  <!-- Removed Journals Modal -->
+  <div id="removed-modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content">
+      <button id="close-removed" class="modal-close" aria-label="Close">&times;</button>
+      <h3>Removed Journals</h3>
+      <div class="table-container">
+        <table id="removed-table" class="removed-table" role="table">
+          <thead><tr><th>Title</th><th>ISSN</th><th>Year Removed</th><th>Last Review</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Removed Journals Modal -->
-<div id="removed-modal" class="modal-overlay">
-  <div class="modal-content">
-    <span id="close-removed" class="modal-close">&times;</span>
-    <h2>Removed Journals</h2>
-    <div class="table-container">
-      <table id="removed-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>ISSN</th>
-            <th>Year Removed</th>
-            <th>Date of Last Review</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
