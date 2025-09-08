@@ -32,9 +32,8 @@ const TRANSFORMATIVE_FILES = [
   {file:'American Chemical Society (ACS)_2025.csv', link:'https://sanlic.ac.za/american-chemical-society-acs/'}
 ];
 
+/* ===================== DOM ===================== */
 const $ = id => document.getElementById(id);
-
-/* UI elements */
 const journalQuery = $('journal-query');
 const checkBtn = $('check-btn');
 const autocompleteResults = $('autocomplete-results');
@@ -51,38 +50,33 @@ const removedModal = $('removed-modal');
 const closeRemoved = $('close-removed');
 const removedTableBody = $('removed-table').querySelector('tbody');
 const summaryBody = $('summary-body');
-
 const infoTitle = $('info-title');
 const infoIssn = $('info-issn');
 const infoPublisher = $('info-publisher');
 const infoIndexes = $('info-indexes');
-
 const sDHET = $('s-dhet');
 const sScopus = $('s-scopus');
 const sWos = $('s-wos');
 const sDoaj = $('s-doaj');
 const sIbss = $('s-ibss');
 const sScielo = $('s-scielo');
-
 const transformativeInfo = $('transformative-info');
+const realtimeInfo = $('realtime-info');
 const exportJsonBtn = $('export-json');
 
 let journalLists = { dhet:[], doaj:[], ibss:[], norwegian:[], other:[], scielo:[], scopus:[], wos:[], removed:[] };
 let transformativeList = [];
 
-/* UTILITIES */
+/* ===================== UTILITIES ===================== */
 function showLoading(msg){ loadingMessage.textContent = msg; loadingMessage.style.display = 'block'; }
 function hideLoading(){ loadingMessage.style.display = 'none'; }
 function showError(msg){ errorMessage.textContent = msg; errorMessage.style.display = 'block'; setTimeout(()=>errorMessage.style.display='none',7000); }
 function normalizeTitle(t){ return (t||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim(); }
 function isISSN(s){ return /\b\d{4}-?\d{3}[\dXx]\b/.test(s); }
 function rawUrlFor(fname){ return RAW_BASE + encodeURIComponent(fname); }
-
-/* Robust CSV parser (simple) */
 function parseCSV(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
   if(lines.length < 1) return [];
-  // choose delimiter
   const delim = (lines[0].includes('|') && lines[0].split('|').length>1) ? '|' : ',';
   const headers = lines[0].split(delim).map(h=>h.trim().toLowerCase());
   return lines.slice(1).map(line=>{
@@ -93,7 +87,7 @@ function parseCSV(text){
   });
 }
 
-/* LOAD LISTS */
+/* ===================== LOAD LISTS ===================== */
 journalQuery.disabled = true;
 async function loadAllLists(){
   showLoading('Loading journal lists (this may take a few seconds)…');
@@ -129,7 +123,7 @@ async function loadAllLists(){
 }
 loadAllLists();
 
-/* AUTOCOMPLETE */
+/* ===================== AUTOCOMPLETE ===================== */
 journalQuery.addEventListener('input', function(){
   const q = normalizeTitle(this.value || '');
   autocompleteResults.innerHTML = '';
@@ -165,7 +159,7 @@ document.addEventListener('click', e=>{
   if(!autocompleteResults.contains(e.target) && e.target !== journalQuery) autocompleteResults.style.display = 'none';
 });
 
-/* SEARCH helpers */
+/* ===================== SEARCH HELPERS ===================== */
 function findOffline(query){
   const qNorm = normalizeTitle(query);
   const issnQuery = isISSN(query) ? query.replace('-','').toLowerCase() : null;
@@ -190,7 +184,7 @@ function checkRemovedList(query){
   return journalLists.removed.find(j => normalizeTitle(j.title || j['journal title'] || j['journal'] || '') === qNorm);
 }
 
-/* BUILD REPORT */
+/* ===================== BUILD REPORT ===================== */
 function buildReportText(query, offlineHit, removedHit){
   const f = offlineHit.flags || {};
   const hit = offlineHit.sample || { title: query };
@@ -231,12 +225,38 @@ function buildReportText(query, offlineHit, removedHit){
   return { text: parts.join('\n'), recClass, recText, meta: { query, hit, flags: f, transformed: trans } };
 }
 
-/* UI render */
+/* ===================== CROSSREF LIVE LOOKUP ===================== */
+async function fetchCrossRefInfo(issn) {
+  if(!issn) {
+    realtimeInfo.textContent = 'No ISSN to query CrossRef';
+    return;
+  }
+  realtimeInfo.textContent = 'Fetching license info...';
+  try {
+    const resp = await fetch(`https://api.crossref.org/journals/${issn}`);
+    const data = await resp.json();
+    if(data.status === 'ok' && data.message) {
+      const journal = data.message;
+      if(journal.license && journal.license.length) {
+        const lic = journal.license[0];
+        realtimeInfo.innerHTML = `License: <a href="${lic.URL}" target="_blank">${lic['content-version']}</a>`;
+      } else {
+        realtimeInfo.textContent = 'No license info found';
+      }
+    } else {
+      realtimeInfo.textContent = 'No CrossRef data';
+    }
+  } catch(e) {
+    realtimeInfo.textContent = 'Error fetching CrossRef data';
+    console.error(e);
+  }
+}
+
+/* ===================== UI RENDER ===================== */
 function showReport(text, recClass, recText, meta){
   journalReport.textContent = text;
   journalReport.style.display = 'block';
 
-  // info card
   const hit = meta?.hit || {};
   infoTitle.textContent = hit.title || meta?.query || '—';
   infoIssn.textContent = hit.issn || hit['issn'] || '—';
@@ -244,7 +264,6 @@ function showReport(text, recClass, recText, meta){
   const indexes = Object.keys(meta?.flags || {}).filter(k => meta.flags[k]).map(k => k.toUpperCase()).join(', ') || 'None';
   infoIndexes.textContent = indexes;
 
-  // status badges
   const f = meta.flags || {};
   sDHET.className = `pill ${f.dhet ? 'ok' : 'nope'}`; sDHET.textContent = f.dhet ? 'Found' : 'No';
   sScopus.className = `pill ${f.scopus ? 'ok' : 'nope'}`; sScopus.textContent = f.scopus ? 'Found' : 'No';
@@ -253,15 +272,12 @@ function showReport(text, recClass, recText, meta){
   sIbss.className = `pill ${f.ibss ? 'ok' : 'nope'}`; sIbss.textContent = f.ibss ? 'Found' : 'No';
   sScielo.className = `pill ${f.scielo ? 'ok' : 'nope'}`; sScielo.textContent = f.scielo ? 'Found' : 'No';
 
-  // info badge
   infoBadge.className = 'badge ' + (recClass === 'recommended' ? 'good' : (recClass==='verify' ? 'warn' : 'bad'));
   infoBadge.textContent = recClass === 'recommended' ? 'Verified' : (recClass === 'verify' ? 'Check' : 'Not recommended');
 
-  // status badge
   recommendationBadge.className = 'badge ' + (recClass === 'recommended' ? 'good' : (recClass==='verify' ? 'warn' : 'bad'));
   recommendationBadge.textContent = recText;
 
-  // transformative block
   if(meta.transformed && meta.transformed.length){
     const t = meta.transformed[0];
     transformativeInfo.innerHTML = `<div><strong>${t.title || t.journal || ''}</strong></div>
@@ -272,27 +288,32 @@ function showReport(text, recClass, recText, meta){
     transformativeInfo.textContent = 'No transformative agreement found';
   }
 
-  // reveal summary area
   summaryBody.scrollIntoView({ behavior: 'smooth' });
 }
 
-/* RUN CHECK */
+/* ===================== RUN CHECK ===================== */
 function runCheck(){
   const query = journalQuery.value.trim();
   if(!query) return showError('Please enter a journal title or ISSN');
+
   const offlineHit = findOffline(query);
   const removedHit = checkRemovedList(query);
   const report = buildReportText(query, offlineHit, removedHit);
-  showReport(report.text, report.recClass, report.recText, {...report.meta, transformed: report.meta.transformed || report.meta.transformed});
+  showReport(report.text, report.recClass, report.recText, report.meta);
+
+  // Live CrossRef lookup
+  const issn = offlineHit.sample?.issn || offlineHit.sample?.ISSN || '';
+  fetchCrossRefInfo(issn);
 }
 
-/* button handlers */
+/* ===================== BUTTON HANDLERS ===================== */
 checkBtn.addEventListener('click', runCheck);
 journalQuery.addEventListener('keypress', e => { if(e.key === 'Enter') runCheck(); });
 
 copyReportBtn.addEventListener('click', ()=>{
   navigator.clipboard.writeText(journalReport.textContent || '').then(()=> showError('Report copied to clipboard'));
 });
+
 downloadReportBtn.addEventListener('click', ()=>{
   const blob = new Blob([journalReport.textContent || ''], {type:'text/plain'});
   const url = URL.createObjectURL(blob);
@@ -300,9 +321,16 @@ downloadReportBtn.addEventListener('click', ()=>{
   URL.revokeObjectURL(url);
 });
 
-/* REMOVED MODAL */
+exportJsonBtn.addEventListener('click', ()=>{
+  const payload = { exportedAt: new Date().toISOString(), report: journalReport.textContent || '' };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'journal-report.json'; a.click(); 
+  URL.revokeObjectURL(url);
+});
+
+/* ===================== REMOVED MODAL ===================== */
 showRemovedBtn.addEventListener('click', ()=>{
-  // populate table
   removedTableBody.innerHTML = '';
   if(journalLists.removed.length === 0){
     const tr = document.createElement('tr');
@@ -323,18 +351,9 @@ showRemovedBtn.addEventListener('click', ()=>{
 });
 
 closeRemoved.addEventListener('click', ()=>{ removedModal.setAttribute('aria-hidden','true'); removedModal.style.display='none'; });
-window.addEventListener('click', e => { if(e.target === removedModal) { removedModal.setAttribute('aria-hidden','true'); removedModal.style.display='none'; } });
+window.addEventListener('click', e=>{ if(e.target === removedModal) removedModal.style.display='none'; });
 
 copyRemovedBtn.addEventListener('click', ()=>{
-  const txt = journalLists.removed.map(j => `${j.title || j['journal title'] || ''}\t${j.issn || j['issn'] || ''}\t${j.year_removed || ''}\t${j.last_review || ''}`).join('\n');
-  navigator.clipboard.writeText(txt).then(()=> showError('Removed journals copied to clipboard'));
-});
-
-/* export JSON */
-exportJsonBtn.addEventListener('click', ()=>{
-  const txt = journalReport.textContent || '';
-  const payload = { exportedAt: new Date().toISOString(), report: txt };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'journal-report.json'; a.click(); URL.revokeObjectURL(url);
+  let text = journalLists.removed.map(j => `${j.title || j['journal title'] || ''}\t${j.issn || j['issn'] || ''}\t${j.year_removed || j.year || ''}\t${j.last_review || j['date of last review'] || ''}`).join('\n');
+  navigator.clipboard.writeText(text).then(()=> showError('Removed journals copied'));
 });
