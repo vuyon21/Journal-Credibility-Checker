@@ -63,7 +63,6 @@ function rawUrlFor(fname){ return RAW_BASE + encodeURIComponent(fname); }
 function parseCSV(text){
   const lines = text.split(/\r?\n/).filter(Boolean);
   if(lines.length < 2) return [];
-  // detect delimiter
   const delimiter = (lines[0].split('|').length > lines[0].split(',').length) ? '|' : ',';
   const headers = lines[0].split(delimiter).map(h=>h.trim());
   return lines.slice(1).map(line=>{
@@ -75,6 +74,7 @@ function parseCSV(text){
 }
 
 /* ===================== LOAD LISTS ===================== */
+journalQuery.disabled = true;
 async function loadAllLists(){
   showLoading('Loading journal lists...');
   for(const [key,fname] of Object.entries(FILENAMES)){
@@ -96,6 +96,7 @@ async function loadAllLists(){
     }catch(e){ console.warn('Failed loading transformative file',t.file,e); }
   }
   hideLoading();
+  journalQuery.disabled = false;
 }
 loadAllLists();
 
@@ -155,7 +156,6 @@ function buildReportText(query,offlineHit,removedHit){
   else if(f.doaj||f.ibss||f.scielo){ recText='⚠️ Verify manually: Appears in minor indexes'; recClass='verify'; }
   if(removedHit){ recText='❌ Not recommended: Appears on removed list'; recClass='not-recommended'; }
   
-  // Transformative
   let trans = transformativeList.filter(t=>normalizeTitle(t.journal||t.title)===normalizeTitle(hit.title));
   let transText = 'Transformative: No';
   if(trans.length){
@@ -185,6 +185,54 @@ function buildReportText(query,offlineHit,removedHit){
   ];
   return {text:parts.join('\n'),recClass,recText};
 }
+
 function showReport(text,recClass,recText){
-  journalReport.textContent=text; journalReport.style.display='block';
-  recommendation.textContent=recText; recommendation.className='recommendation '+recClass; recommendation
+  journalReport.textContent = text;
+  journalReport.style.display = 'block';
+  recommendation.textContent = recText;
+  recommendation.className = 'recommendation ' + recClass;
+  recommendation.style.display = 'block';
+}
+
+/* ===================== RUN CHECK ===================== */
+function runCheck(){
+  const query = journalQuery.value.trim();
+  if(!query) return showError('Please enter a journal title or ISSN');
+
+  const offlineHit = findOffline(query);
+  const removedHit = checkRemovedList(query);
+
+  const report = buildReportText(query, offlineHit, removedHit);
+  showReport(report.text, report.recClass, report.recText);
+}
+
+checkBtn.addEventListener('click', runCheck);
+journalQuery.addEventListener('keypress', e => { if(e.key==='Enter') runCheck(); });
+
+/* ===================== COPY / DOWNLOAD ===================== */
+copyReportBtn.addEventListener('click', ()=>{ navigator.clipboard.writeText(journalReport.textContent).then(()=>showError('Report copied!')); });
+downloadReportBtn.addEventListener('click', ()=>{
+  const blob = new Blob([journalReport.textContent], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='journal-report.txt'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ===================== REMOVED JOURNALS MODAL ===================== */
+showRemovedBtn.addEventListener('click', () => {
+  removedModal.style.display = 'flex';
+  removedTableBody.innerHTML = '';
+  journalLists.removed.forEach(j => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${j.title}</td><td>${j.issn}</td><td>${j.year_removed}</td><td>${j.last_review}</td>`;
+    removedTableBody.appendChild(tr);
+  });
+});
+closeRemoved.addEventListener('click', () => { removedModal.style.display='none'; });
+window.addEventListener('click', e=>{ if(e.target===removedModal) removedModal.style.display='none'; });
+
+/* ===================== COPY REMOVED ===================== */
+copyRemovedBtn.addEventListener('click', ()=>{
+  let txt = journalLists.removed.map(j=>`${j.title}\t${j.issn}\t${j.year_removed}\t${j.last_review}`).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>showError('Removed journals copied!'));
+});
