@@ -1,53 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UFS Journal Credibility Checker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
+        <header>
             <h1><i class="fas fa-book-journal-whills"></i> UFS Journal Credibility Checker</h1>
             <p class="subtitle">Verify journal credibility using 2025 accredited lists, transformative agreements, and real-time checks via Crossref, PubMed, and OpenAlex</p>
         </header>
-
-        <!-- Search & Controls -->
+        
         <div class="search-container">
             <div class="input-group">
-                <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN" />
+                <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN">
                 <select id="searchType">
                     <option value="title">Search by Title</option>
                     <option value="issn">Search by ISSN</option>
                 </select>
                 <button id="searchBtn"><i class="fas fa-search"></i> Search / Check</button>
             </div>
+            
             <div class="button-group">
-                <button id="copyReportBtn" class="btn-secondary"><i class="fas fa-copy"></i> Copy Report</button>
-                <button id="downloadReportBtn" class="btn-secondary"><i class="fas fa-download"></i> Download Report</button>
-                <button id="downloadPdfBtn" class="btn-secondary"><i class="fas fa-file-pdf"></i> Export PDF</button>
-                <button id="showRemovedBtn" class="btn-success"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
-                <button id="copyRemovedBtn" class="btn-success"><i class="fas fa-copy"></i> Copy Removed List</button>
+                <button class="btn-secondary" id="copyReportBtn"><i class="fas fa-copy"></i> Copy Report</button>
+                <button class="btn-secondary" id="downloadReportBtn"><i class="fas fa-download"></i> Download Report</button>
+                <button class="btn-success" id="showRemovedBtn"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
+                <button class="btn-success" id="copyRemovedBtn"><i class="fas fa-copy"></i> Copy Removed List</button>
             </div>
         </div>
-
-        <!-- Results (hidden by default) -->
+        
         <div class="results-container" id="resultsContainer">
-            <!-- Will be populated by JS -->
+            <!-- Results will be populated by JavaScript -->
         </div>
-
-        <!-- Footer -->
+        
         <footer>
             <p>© 2025 - UFS | Journal Credibility Checker</p>
         </footer>
     </div>
 
-    <!-- Include jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
