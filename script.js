@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const showRemovedBtn = document.getElementById('showRemovedBtn');
     const copyRemovedBtn = document.getElementById('copyRemovedBtn');
     
-    // Configuration
+    // Configuration - using CORS proxy to bypass restrictions
+    const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
     const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
     
     // Accredited file names
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function rawUrlFor(fname) { 
-        return RAW_BASE + encodeURIComponent(fname); 
+        return CORS_PROXY + RAW_BASE + encodeURIComponent(fname); 
     }
     
     function parseCSV(text) {
@@ -110,6 +111,8 @@ document.addEventListener('DOMContentLoaded', function() {
         showLoading('Loading journal lists...');
         
         let loadedSuccessfully = false;
+        let loadedCount = 0;
+        const totalToLoad = Object.keys(FILENAMES).length + TRANSFORMATIVE_FILES.length;
         
         for (const [key, fname] of Object.entries(FILENAMES)) {
             try {
@@ -118,28 +121,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     const text = await res.text();
                     journalLists[key] = parseCSV(text);
                     loadedSuccessfully = true;
+                    loadedCount++;
+                    updateProgress(loadedCount, totalToLoad);
                 } else {
                     throw new Error(`HTTP ${res.status}`);
                 }
             } catch(e) { 
                 console.warn('Failed loading', fname, e); 
-                // Load sample data if CSV loading fails
-                if (key === 'removed') {
-                    journalLists[key] = [
-                        { title: 'Journal of Questionable Studies', issn: '1234-5678', year_removed: '2024', last_review_date: '2024-03-15' },
-                        { title: 'International Journal of Non-credible Research', issn: '2345-6789', year_removed: '2023', last_review_date: '2023-06-22' },
-                        { title: 'Quick Publication Review', issn: '3456-7890', year_removed: '2023', last_review_date: '2023-11-05' },
-                        { title: 'Studies in Predatory Publishing', issn: '4567-8901', year_removed: '2022', last_review_date: '2022-09-30' },
-                        { title: 'Fast Science Express', issn: '5678-9012', year_removed: '2022', last_review_date: '2022-01-18' }
-                    ];
-                } else {
-                    // Convert sample data to CSV-like format
-                    journalLists[key] = [
-                        { title: 'Nature', issn: '0028-0836', publisher: 'Springer Nature' },
-                        { title: 'Science', issn: '0036-8075', publisher: 'American Association for the Advancement of Science' },
-                        { title: 'PLOS ONE', issn: '1932-6203', publisher: 'Public Library of Science' }
-                    ];
-                }
+                // Don't load sample data - just leave the array empty
+                journalLists[key] = [];
+                loadedCount++;
+                updateProgress(loadedCount, totalToLoad);
             }
         }
         
@@ -159,22 +151,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch(e) { 
                 console.warn('Failed loading transformative file', t.file, e); 
-                // Add sample transformative data
-                transformativeList.push({
-                    journal: 'Nature',
-                    publisher: 'Springer Nature',
-                    duration: '2023-2025',
-                    link: 'https://sanlic.ac.za/springer/'
-                });
+                // Don't add sample transformative data
             }
+            loadedCount++;
+            updateProgress(loadedCount, totalToLoad);
         }
         
         hideLoading();
         
         if (!loadedSuccessfully) {
-            showError('Using sample data. Could not load external CSV files due to CORS restrictions.');
+            showError('Could not load external CSV files due to CORS restrictions. Please click "Try Again" to attempt reloading.');
         } else {
             resultsContainer.innerHTML = '<p>Enter a journal name or ISSN to check its credibility.</p>';
+        }
+    }
+    
+    function updateProgress(current, total) {
+        const progressElement = document.getElementById('progressText');
+        if (progressElement) {
+            progressElement.textContent = `Loading... ${current}/${total} files`;
         }
     }
     
@@ -260,23 +255,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            // This is a simplified example - in a real implementation, you'd use the PubMed API
-            // Note: PubMed doesn't have a direct journal lookup API, so this would typically
-            // search for articles from the journal
-            const response = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(title)}[Journal]&retmode=json`);
+            // Using a more reliable approach for PubMed data
+            const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}&format=json`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
             
-            if (data.esearchresult && data.esearchresult.count) {
-                return `Approximately ${data.esearchresult.count} articles indexed in PubMed`;
+            if (data.hitCount && data.hitCount > 0) {
+                return `Approximately ${data.hitCount} articles indexed in Europe PMC (including PubMed)`;
             } else {
-                return 'No articles found in PubMed';
+                return 'No articles found in Europe PMC/PubMed';
             }
         } catch (error) {
             console.error('Error fetching PubMed data:', error);
-            return 'Error fetching data from PubMed';
+            return 'Error fetching data from Europe PMC/PubMed';
         }
     }
     
@@ -411,6 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayRemovedJournals() {
         const removedList = journalLists.removed || [];
         
+        if (removedList.length === 0) {
+            resultsContainer.innerHTML = '<p>No removed journals data available or failed to load.</p>';
+            return;
+        }
+        
         resultsContainer.innerHTML = `
             <table class="report-table">
                 <thead>
@@ -473,6 +471,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     copyRemovedBtn.addEventListener('click', function() {
         const removedList = journalLists.removed || [];
+        
+        if (removedList.length === 0) {
+            alert('No removed journals data available to copy.');
+            return;
+        }
+        
         let textToCopy = "Journals Removed from Accredited List:\n\n";
         
         removedList.forEach(journal => {
