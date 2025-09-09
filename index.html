@@ -26,15 +26,8 @@
         <div class="card">
             <h2>Check Journal Credibility</h2>
             <div class="search-box">
-                <input type="text" id="journalSearch" placeholder="Enter journal name, ISSN, or publisher">
-                <button id="searchButton"><i class="fas fa-search"></i> Check Credibility</button>
-            </div>
-            <div class="filters">
-                <div class="filter active" data-filter="all">All Journals</div>
-                <div class="filter" data-filter="high">High Credibility</div>
-                <div class="filter" data-filter="medium">Medium Credibility</div>
-                <div class="filter" data-filter="low">Low Credibility</div>
-                <div class="filter" data-filter="open">Open Access</div>
+                <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN">
+                <button id="searchBtn"><i class="fas fa-search"></i> Check Credibility</button>
             </div>
             <div class="action-buttons">
                 <button class="action-btn" id="showRemovedBtn"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
@@ -45,41 +38,12 @@
 
         <div class="card">
             <h2>Credibility Results</h2>
-            <div class="results" id="journalResults">
-                <!-- Results will be dynamically inserted here -->
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>Journal Credibility Statistics</h2>
-            <div class="stats">
-                <div class="stat">
-                    <h3>2,847</h3>
-                    <p>Journals Analyzed</p>
-                </div>
-                <div class="stat">
-                    <h3>73%</h3>
-                    <p>High Credibility Score</p>
-                </div>
-                <div class="stat">
-                    <h3>18%</h3>
-                    <p>Potential Predatory Journals</p>
+            <div class="results" id="resultsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading journal lists...</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div class="modal" id="removedModal">
-        <div class="modal-content">
-            <span class="close-modal" id="closeModal">&times;</span>
-            <h2>Journals Removed from Accredited List</h2>
-            <ul id="removedList">
-                <li>Journal of Questionable Research Practices</li>
-                <li>International Journal of Non-Peer Reviewed Studies</li>
-                <li>Global Predatory Publishing Review</li>
-                <li>Rapid Publication Medical Journal</li>
-                <li>Pay-to-Publish Science Review</li>
-            </ul>
         </div>
     </div>
 
