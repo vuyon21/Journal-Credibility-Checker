@@ -106,6 +106,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Smart field extraction based on header names
+    function extractField(data, possibleFieldNames) {
+        for (const field of possibleFieldNames) {
+            if (data[field] !== undefined && data[field] !== '') {
+                return data[field];
+            }
+        }
+        return 'N/A';
+    }
+    
     // Load CSV files
     async function loadAllLists() {
         showLoading('Loading journal lists...');
@@ -143,7 +153,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     const text = await res.text();
                     const rows = parseCSV(text);
                     rows.forEach(r => {
-                        transformativeList.push({...r, link: t.link});
+                        transformativeList.push({
+                            ...r, 
+                            link: t.link,
+                            // Extract publisher information
+                            publisher: extractField(r, ['publisher', 'publishers', 'publisher name', 'publisher_name']),
+                            // Extract duration information
+                            duration: extractField(r, ['agreement duration', 'duration', 'agreement_duration', 'agreement period', 'agreement_period']),
+                            // Extract journal title
+                            journal: extractField(r, ['journal title', 'journal', 'journal_title', 'title', 'journal name', 'journal_name'])
+                        });
                     });
                     loadedSuccessfully = true;
                 } else {
@@ -303,10 +322,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (transformativeMatch) {
             transformativeInfo = `
-                <strong>${transformativeMatch.journal || transformativeMatch.title}</strong><br>
-                Publisher: ${transformativeMatch.publisher || 'N/A'}<br>
-                Duration: ${transformativeMatch.duration || 'N/A'}<br>
-                <a href="${transformativeMatch.link}" target="_blank">View agreement</a>
+                <div class="transformative-info">
+                    <h4>Transformative Agreement Found</h4>
+                    <div class="transformative-details">
+                        <div class="transformative-detail">
+                            <strong>Journal:</strong> ${transformativeMatch.journal || transformativeMatch.title || 'N/A'}
+                        </div>
+                        <div class="transformative-detail">
+                            <strong>Publisher:</strong> ${transformativeMatch.publisher || 'N/A'}
+                        </div>
+                        <div class="transformative-detail">
+                            <strong>Duration:</strong> ${transformativeMatch.duration || 'N/A'}
+                        </div>
+                        <div class="transformative-detail">
+                            <strong>Agreement:</strong> <a href="${transformativeMatch.link}" target="_blank">View agreement details</a>
+                        </div>
+                    </div>
+                </div>
             `;
         }
         
@@ -374,12 +406,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td class="info-label">Norwegian List</td>
                         <td><i class="fas fa-${f.norwegian ? 'check-circle' : 'times-circle'}" style="color: ${f.norwegian ? 'var(--success)' : 'var(--danger)'};"></i> ${f.norwegian ? 'Found' : 'Not found'}</td>
                     </tr>
-                    <tr>
-                        <td class="info-label">Transformative Agreement</td>
-                        <td>${transformativeInfo}</td>
-                    </tr>
                 </tbody>
             </table>
+            
+            ${transformativeInfo}
             
             <table class="report-table">
                 <thead>
@@ -467,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     showRemovedBtn.addEventListener('click', function() {
         displayRemovedJournals();
-    });
+    }
     
     copyRemovedBtn.addEventListener('click', function() {
         const removedList = journalLists.removed || [];
