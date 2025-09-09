@@ -1,8 +1,17 @@
-/* ===================== CONFIG ===================== */
+/* ================== CONFIG ================== */
 const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
 const FILENAMES = {
-  dhet:'DHET_2025.csv', dhet2:'DHET_2_2025.csv', doaj:'DOAJ_2025.csv', ibss:'IBSS_2025.csv', norwegian:'NORWEGIAN_2025.csv', scielo:'SCIELO SA_2025.csv', scopus:'SCOPUS_2025.csv', wos:'WOS_2025.csv', removed:'JOURNALS REMOVED IN PAST YEARS.csv'
+  dhet: 'DHET_2_2025.csv',
+  dhet2: 'DHET_2025.csv',
+  doaj: 'DOAJ_2025.csv',
+  ibss: 'IBSS_2025.csv',
+  norwegian: 'NORWEGIAN_2025.csv',
+  scielo: 'SCIELO SA_2025.csv',
+  scopus: 'SCOPUS_2025.csv',
+  wos: 'WOS_2025.csv',
+  removed: 'JOURNALS REMOVED IN PAST YEARS.csv'
 };
+
 const TRANSFORMATIVE_FILES = [
   {file:'WILEY_2025.csv', link:'https://sanlic.ac.za/wiley/'},
   {file:'The Company of Biologists_2025.csv', link:'https://sanlic.ac.za/the-company-of-biologists/'},
@@ -22,174 +31,178 @@ const TRANSFORMATIVE_FILES = [
   {file:'American Chemical Society (ACS)_2025.csv', link:'https://sanlic.ac.za/american-chemical-society-acs/'}
 ];
 
-/* DOM */
+/* ================== DOM ================== */
 const $ = id => document.getElementById(id);
 const journalQuery = $('journal-query');
 const checkBtn = $('check-btn');
 const autocompleteResults = $('autocomplete-results');
-const journalReport = $('report-section');
+const journalReportSection = $('report-section');
+const infoTitle = $('info-title');
+const infoIssn = $('info-issn');
+const infoPublisher = $('info-publisher');
+const infoIndexes = $('info-indexes');
+const transformativeInfo = $('transformative-info');
+const crossrefInfo = $('crossref-info');
+const pubmedInfo = $('pubmed-info');
+const statusBadge = $('status-badge');
 const loadingMessage = $('loading-message');
 const errorMessage = $('error-message');
-const infoTitle=$('info-title'); const infoIssn=$('info-issn'); const infoPublisher=$('info-publisher'); const infoIndexes=$('info-indexes');
-const sDHET=$('s-dhet'); const sScopus=$('s-scopus'); const sWos=$('s-wos'); const sDoaj=$('s-doaj'); const sIbss=$('s-ibss'); const sScielo=$('s-scielo');
-const transformativeInfo=$('transformative-info'); const crossrefInfo=$('crossref-info'); const pubmedInfo=$('pubmed-info'); const recommendationBadge=$('status-badge');
+const removedModal = $('removed-modal');
+const closeRemoved = $('close-removed');
+const removedTableBody = $('removed-table').querySelector('tbody');
+const copyReportBtn = $('copy-report-btn');
+const downloadReportBtn = $('download-report-btn');
+const exportJsonBtn = $('export-json');
+const showRemovedBtn = $('show-removed-btn');
+const copyRemovedBtn = $('copy-removed-btn');
 
-const copyReportBtn=$('copy-report-btn');
-const downloadReportBtn=$('download-report-btn');
-const exportJsonBtn=$('export-json');
-const showRemovedBtn=$('show-removed-btn');
-const removedModal=$('removed-modal');
-const closeRemoved=$('close-removed');
-const removedTableBody=$('removed-table').querySelector('tbody');
-let journalLists={}, removedJournals=[], transformativeList=[];
+let journalLists = {};
+let transformativeList = [];
+let removedJournals = [];
 
-/* ===================== FETCH CSV ===================== */
-async function fetchCSV(fname){
-  const res = await fetch(RAW_BASE + encodeURIComponent(fname));
-  const text = await res.text();
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  const delim = (lines[0].includes('|') && lines[0].split('|').length>1)? '|' : ',';
-  const headers = lines[0].split(delim).map(h=>h.trim());
-  return lines.slice(1).map(l=>{
-    const cols = l.split(delim).map(c=>c.trim());
-    let obj={};
-    headers.forEach((h,i)=>obj[h]=cols[i]||'');
-    return obj;
+/* ================== UTILS ================== */
+function showLoading(msg){loadingMessage.textContent=msg;loadingMessage.style.display='block';}
+function hideLoading(){loadingMessage.style.display='none';}
+function showError(msg){errorMessage.textContent=msg;errorMessage.style.display='block';setTimeout(()=>errorMessage.style.display='none',7000);}
+function normalizeTitle(t){return (t||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}
+function isISSN(s){return /\b\d{4}-?\d{3}[\dXx]\b/.test(s);}
+function rawUrlFor(fname){return RAW_BASE + encodeURIComponent(fname);}
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  if(lines.length<1) return [];
+  const delim = (lines[0].includes('|') && lines[0].split('|').length>1)?'|':',';
+  const headers = lines[0].split(delim).map(h=>h.trim().toLowerCase());
+  return lines.slice(1).map(line=>{
+    const parts=line.split(delim).map(p=>p.trim());
+    const row={};
+    headers.forEach((h,i)=>row[h]=parts[i]||'');
+    return row;
   });
 }
 
-/* ===================== INIT ===================== */
-async function init(){
-  loadingMessage.style.display='block';
-  try{
-    for(const key in FILENAMES){
-      if(key==='removed'){ removedJournals=await fetchCSV(FILENAMES[key]); continue;}
-      journalLists[key]=await fetchCSV(FILENAMES[key]);
-    }
-    for(const t of TRANSFORMATIVE_FILES){
-      const data = await fetchCSV(t.file);
-      data.forEach(d=>d.link=t.link);
-      transformativeList.push(...data);
-    }
-  }catch(e){ showError('Error loading journal lists'); console.error(e);}
-  loadingMessage.style.display='none';
+/* ================== LOAD CSV FILES ================== */
+async function loadAllLists(){
+  showLoading('Loading journal lists…');
+  for(const [key,fname] of Object.entries(FILENAMES)){
+    try{
+      const res = await fetch(rawUrlFor(fname));
+      const txt = await res.text();
+      journalLists[key] = parseCSV(txt);
+      if(key==='removed') removedJournals = journalLists[key];
+    }catch(e){showError(`Could not load ${fname}`);}
+  }
+  // Transformative
+  for(const t of TRANSFORMATIVE_FILES){
+    try{
+      const res = await fetch(rawUrlFor(t.file));
+      const txt = await res.text();
+      parseCSV(txt).forEach(r=>transformativeList.push({...r, link:t.link}));
+    }catch(e){console.warn('Failed loading transformative',t.file);}
+  }
+  hideLoading();
 }
-init();
+loadAllLists();
 
-/* ===================== AUTOCOMPLETE ===================== */
-function normalizeTitle(t){return (t||'').toLowerCase().replace(/[^a-z0-9]/g,' ').trim();}
+/* ================== AUTOCOMPLETE ================== */
 journalQuery.addEventListener('input',()=>{
-  const val=normalizeTitle(journalQuery.value);
-  autocompleteResults.innerHTML=''; if(!val) return autocompleteResults.style.display='none';
-  let suggestions=[];
-  Object.values(journalLists).forEach(list=>list.forEach(j=>{
-    if(normalizeTitle(j['Journal Title']||j['Journal title']||j['Title']||'').includes(val)) suggestions.push(j);
-  }));
-  suggestions=suggestions.slice(0,8);
-  suggestions.forEach(j=>{
-    const item=document.createElement('div'); item.className='autocomplete-item';
-    item.textContent=j['Journal Title']||j['Journal title']||j['Title'];
-    item.addEventListener('click',()=>{journalQuery.value=item.textContent; autocompleteResults.style.display='none'; runCheck();});
-    autocompleteResults.appendChild(item);
+  const q=normalizeTitle(journalQuery.value);
+  autocompleteResults.innerHTML=''; autocompleteResults.style.display='none';
+  if(q.length<2) return;
+  const suggestions=new Set();
+  Object.values(journalLists).forEach(arr=>{
+    arr.forEach(j=>{
+      const title=j['journal title']||j['journal']||j.title||j.name||'';
+      if(normalizeTitle(title).includes(q)) suggestions.add(title);
+    });
   });
-  autocompleteResults.style.display=suggestions.length?'block':'none';
+  if(suggestions.size){
+    suggestions.forEach(t=>{
+      const div=document.createElement('div');
+      div.className='autocomplete-item'; div.textContent=t;
+      div.addEventListener('click',()=>{journalQuery.value=t; autocompleteResults.style.display='none'; runCheck();});
+      autocompleteResults.appendChild(div);
+    });
+    autocompleteResults.style.display='block';
+  }
 });
+
 document.addEventListener('click', e=>{if(!autocompleteResults.contains(e.target) && e.target!==journalQuery) autocompleteResults.style.display='none';});
 
-/* ===================== FETCH CROSSREF ===================== */
-async function fetchCrossRef(issn){
-  crossrefInfo.textContent='Fetching...';
-  try{
-    const resp=await fetch(`https://api.crossref.org/journals/${issn}`);
-    const data=await resp.json();
-    if(data.status==='ok' && data.message){
-      const lic = data.message.license?.[0];
-      crossrefInfo.innerHTML=lic?`<a href="${lic.URL}" target="_blank">${lic['content-version']}</a>`:'No license found';
-    }else crossrefInfo.textContent='No CrossRef data';
-  }catch(e){ crossrefInfo.textContent='Error fetching CrossRef'; console.error(e);}
-}
-
-/* ===================== FETCH PUBMED ===================== */
-async function fetchPubMed(title){
-  pubmedInfo.textContent='Fetching...';
-  try{
-    const resp=await fetch(`https://api.openalex.org/journals?filter=display_name.search:${encodeURIComponent(title)}`);
-    const data=await resp.json();
-    if(data.meta && data.meta.count!=null) pubmedInfo.textContent=data.meta.count;
-    else pubmedInfo.textContent='No articles found';
-  }catch(e){ pubmedInfo.textContent='Error fetching PubMed'; console.error(e);}
-}
-
-/* ===================== RUN CHECK ===================== */
-function findOffline(query){
-  const qNorm=normalizeTitle(query);
-  const flags={};
-  let sample=null;
-  for(const [key, arr] of Object.entries(journalLists)){
-    if(key==='removed') continue;
-    flags[key]=false;
-    for(const j of arr){
-      const title=j['Journal Title']||j['Journal title']||j['Title']||'';
-      const issn=j['ISSN']||j['issn']||'';
-      if(normalizeTitle(title)===qNorm || issn.replace('-','')===query.replace('-','')) { flags[key]=true; sample=j; break; }
-    }
-  }
-  return {flags, sample};
-}
-function checkRemovedList(query){return removedJournals.find(j=>normalizeTitle(j['Journal Title']||j['Journal title']||'')===normalizeTitle(query));}
-
+/* ================== SEARCH & REPORT ================== */
 async function runCheck(){
-  const query=journalQuery.value.trim(); if(!query){alert('Enter journal'); return;}
-  const offline=findOffline(query); const removedHit=checkRemovedList(query);
-  if(!offline.sample){alert('Journal not found'); return;}
-  journalReport.style.display='block';
-  infoTitle.textContent=offline.sample['Journal Title']||offline.sample['Journal title']||'—';
-  infoIssn.textContent=offline.sample['ISSN']||offline.sample['ISSN']||'—';
-  infoPublisher.textContent=offline.sample['Publisher']||'—';
-  const indexedIn=Object.keys(offline.flags).filter(k=>offline.flags[k]).join(', ')||'None';
-  infoIndexes.textContent=indexedIn;
+  const query=journalQuery.value.trim();
+  if(!query) return showError('Enter journal title or ISSN');
+  journalReportSection.style.display='block';
+  // Reset
+  infoTitle.textContent='—'; infoIssn.textContent='—'; infoPublisher.textContent='—';
+  infoIndexes.textContent='—'; transformativeInfo.textContent='—'; crossrefInfo.textContent='—';
+  pubmedInfo.textContent='—'; statusBadge.textContent='—';
+
+  const qNorm = normalizeTitle(query);
+  let found=null;
+  for(const key in journalLists){
+    if(key==='removed') continue;
+    found = journalLists[key].find(j=>normalizeTitle(j['journal title']||j['journal']||j.title||'')===qNorm || j.issn===query);
+    if(found) break;
+  }
+  if(!found) return showError('Journal not found');
+
+  infoTitle.textContent=found['journal title']||found.title||'—';
+  infoIssn.textContent=(found.issn||found.eissn||'—');
+  infoPublisher.textContent=found.publisher||'—';
+
+  // Indexed in
+  const indexes=[];
+  if(journalLists.dhet.find(j=>j['journal title']===found['journal title'])) indexes.push('DHET');
+  if(journalLists.scopus.find(j=>j['journal title']===found['journal title'])) indexes.push('Scopus');
+  if(journalLists.wos.find(j=>j['journal title']===found['journal title'])) indexes.push('WOS');
+  if(journalLists.doaj.find(j=>j['journal title']===found['journal title'])) indexes.push('DOAJ');
+  if(journalLists.ibss.find(j=>j['journal title']===found['journal title'])) indexes.push('IBSS');
+  if(journalLists.scielo.find(j=>j['journal title']===found['journal title'])) indexes.push('SciELO');
+  infoIndexes.textContent=indexes.join(', ')||'None';
 
   // Transformative
-  const t=transformativeList.find(t=>normalizeTitle(t['Journal Title']||t['Journal title']||'')===normalizeTitle(infoTitle.textContent));
-  if(t) transformativeInfo.innerHTML=`Yes<br><a href="${t.link}" target="_blank">View Agreement</a>`;
+  const trans=transformativeList.find(t=>normalizeTitle(t['journal title']||t.title||'')===qNorm);
+  if(trans) transformativeInfo.innerHTML=`Yes (<a href="${trans.link}" target="_blank">View Agreement</a>)`; 
   else transformativeInfo.textContent='No';
 
   // CrossRef
-  const issn=offline.sample['ISSN']||offline.sample['eISSN']||'';
-  if(issn) await fetchCrossRef(issn);
+  crossrefInfo.textContent='Fetching...';
+  const issnQuery=found.issn||found.eissn||'';
+  if(issnQuery){
+    try{
+      const res=await fetch(`https://api.crossref.org/journals/${issnQuery}`);
+      const data=await res.json();
+      if(data.status==='ok' && data.message){
+        const lic=data.message['license']?.[0]?.['URL']||data.message['license']?.[0]?.['start']||'';
+        crossrefInfo.innerHTML=lic?`<a href="${lic}" target="_blank">License</a>`:'License info not available';
+      } else crossrefInfo.textContent='License info not found';
+    } catch(e){crossrefInfo.textContent='Error fetching CrossRef';}
+  }
 
   // PubMed
-  await fetchPubMed(infoTitle.textContent);
+  pubmedInfo.textContent='Fetching...';
+  try{
+    const pubmedRes=await fetch(`https://api.ncbi.nlm.nih.gov/lit/ctxp/v1/journals/${issnQuery}`);
+    const pubmedData=await pubmedRes.json();
+    pubmedInfo.textContent=pubmedData.count || '0';
+  }catch(e){pubmedInfo.textContent='Error fetching PubMed';}
 
-  // Status
-  let rec='⚠️ Verify'; if(offline.flags.dhet||offline.flags.scopus||offline.flags.wos) rec='✅ Recommended'; if(removedHit) rec='❌ Removed';
-  recommendationBadge.textContent=rec;
+  statusBadge.textContent='Checked';
 }
 
-/* ===================== BUTTONS ===================== */
-checkBtn.addEventListener('click', runCheck);
-journalQuery.addEventListener('keypress', e=>{if(e.key==='Enter') runCheck();});
-copyReportBtn.addEventListener('click', ()=>navigator.clipboard.writeText(infoTitle.textContent+'\n'+infoIssn.textContent).then(()=>alert('Report copied')));
-downloadReportBtn.addEventListener('click', ()=>{
-  const blob=new Blob([infoTitle.textContent+'\n'+infoIssn.textContent], {type:'text/plain'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='journal-report.txt'; a.click(); URL.revokeObjectURL(url);
-});
-exportJsonBtn.addEventListener('click', ()=>{
-  const payload={ exportedAt: new Date().toISOString(), journal: infoTitle.textContent, issn: infoIssn.textContent};
-  const blob=new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='journal-report.json'; a.click(); URL.revokeObjectURL(url);
-});
-
-/* Removed Journals Modal */
-showRemovedBtn.addEventListener('click', ()=>{
+/* ================== REMOVED MODAL ================== */
+showRemovedBtn.addEventListener('click',()=>{
   removedTableBody.innerHTML='';
-  removedJournals.forEach(j=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${j['Journal Title']||j['Journal title']||''}</td><td>${j['ISSN']||j['issn']||''}</td><td>${j['Year Removed']||j['year_removed']||''}</td><td>${j['Last Review']||j['date_of_last_review']||''}</td>`;
-    removedTableBody.appendChild(tr);
+  const years = Array.from(new Set(removedJournals.map(r=>r['year removed'])));
+  years.forEach(y=>{
+    removedJournals.filter(r=>r['year removed']===y).forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r['journal title']}</td><td>${r.issn}</td><td><b>${y}</b></td><td>${r['date of last review or accreditation']||''}</td>`;
+      removedTableBody.appendChild(tr);
+    });
   });
-  removedModal.style.display='flex'; removedModal.setAttribute('aria-hidden','false');
+  removedModal.style.display='flex';
 });
-closeRemoved.addEventListener('click', ()=>{removedModal.style.display='none'; removedModal.setAttribute('aria-hidden','true');});
-window.addEventListener('click', e=>{if(e.target===removedModal){removedModal.style.display='none'; removedModal.setAttribute('aria-hidden','true');}});
-$('copy-removed-btn').addEventListener('click', ()=>navigator.clipboard.writeText(Array.from(removedTableBody.querySelectorAll('tr')).map(tr=>tr.innerText).join('\n')).then(()=>alert('Removed journals copied')));
+closeRemoved.addEventListener('click',()=>removedModal.style.display='none');
+window.addEventListener('click',e=>{if(e.target===removedModal) removedModal.style.display='none';});
