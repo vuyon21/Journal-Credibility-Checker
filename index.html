@@ -4,60 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UFS Journal Credibility Checker</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
   <h1>UFS Journal Credibility Checker</h1>
-
-  <div class="search-section">
+  <div class="search-panel">
     <input type="text" id="journal-query" placeholder="Enter journal title or ISSN">
     <button id="check-btn">Check</button>
     <div id="autocomplete-results" class="autocomplete"></div>
   </div>
-
-  <div id="loading-message" class="loading">Loading...</div>
+  
+  <div id="loading-message" class="loading">Loading journal lists...</div>
   <div id="error-message" class="error"></div>
 
-  <table id="journal-report" class="report" style="display:none;">
-    <tr><th>Journal Title</th><td id="info-title">—</td></tr>
-    <tr><th>ISSN / eISSN</th><td id="info-issn">—</td></tr>
-    <tr><th>Publisher</th><td id="info-publisher">—</td></tr>
-    <tr><th>Indexed In</th><td id="info-indexes">—</td></tr>
-    <tr><th>Transformative Agreement</th><td id="transformative-info">—</td></tr>
-    <tr><th>CrossRef License</th><td id="crossref-info">—</td></tr>
-    <tr><th>PubMed Articles</th><td id="pubmed-info">—</td></tr>
-    <tr><th>Status</th><td id="status-badge">—</td></tr>
-  </table>
-
-  <div class="buttons">
-    <button id="copy-report-btn">Copy Report</button>
-    <button id="download-report-btn">Download Report</button>
-    <button id="export-json">Export JSON</button>
-    <button id="show-removed-btn">Show Removed Journals</button>
-  </div>
-
-  <!-- Removed Journals Modal -->
-  <div id="removed-modal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <span id="close-removed" class="close">&times;</span>
-      <h2>Removed Journals</h2>
-      <table id="removed-table">
-        <thead>
-          <tr>
-            <th>Journal Title</th>
-            <th>ISSN</th>
-            <th>Year Removed</th>
-            <th>Last Review</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button id="copy-removed-btn">Copy Removed Journals</button>
+  <div id="report-section" style="display:none;">
+    <table class="report-table">
+      <tbody>
+        <tr><th>Journal Title</th><td id="info-title">—</td></tr>
+        <tr><th>ISSN / eISSN</th><td id="info-issn">—</td></tr>
+        <tr><th>Publisher</th><td id="info-publisher">—</td></tr>
+        <tr><th>Indexed In</th><td id="info-indexes">—</td></tr>
+        <tr><th>Transformative Agreement</th><td id="transformative-info">—</td></tr>
+        <tr><th>CrossRef License</th><td id="crossref-info">—</td></tr>
+        <tr><th>PubMed Articles</th><td id="pubmed-info">—</td></tr>
+        <tr><th>Status</th><td id="status-badge">—</td></tr>
+      </tbody>
+    </table>
+    <div class="report-buttons">
+      <button id="copy-report-btn">Copy Report</button>
+      <button id="download-report-btn">Download Report</button>
+      <button id="export-json">Export JSON</button>
+      <button id="show-removed-btn">Show Removed Journals</button>
     </div>
   </div>
-
 </div>
+
+<div id="removed-modal" class="modal" aria-hidden="true">
+  <div class="modal-content">
+    <span id="close-removed" class="close">&times;</span>
+    <h2>Removed Journals</h2>
+    <table id="removed-table">
+      <thead>
+        <tr><th>Journal Title</th><th>ISSN</th><th>Year Removed</th><th>Last Review</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button id="copy-removed-btn">Copy Removed Journals</button>
+  </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
