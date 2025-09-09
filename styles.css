@@ -246,6 +246,21 @@ button:hover {
     font-size: 0.8rem;
 }
 
+.live-info {
+    margin-top: 5px;
+    font-size: 0.9rem;
+    color: var(--dark);
+}
+
+.live-info a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.live-info a:hover {
+    text-decoration: underline;
+}
+
 footer {
     text-align: center;
     margin-top: 40px;
@@ -266,5 +281,9 @@ footer {
     .report-table {
         display: block;
         overflow-x: auto;
+    }
+    
+    .info-label {
+        width: 150px;
     }
 }
