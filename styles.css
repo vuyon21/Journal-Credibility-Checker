@@ -1,12 +1,12 @@
 /* General Styles */
-body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#f4f4f4; color:#333; }
-.container { max-width: 900px; margin: 0 auto; padding: 20px; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-header h1 { color: #800000; margin-bottom:5px; }
-header p { color: #444; margin-bottom:20px; }
+body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#f4f4f4; color:#333; display:flex; justify-content:center; }
+.container { max-width: 900px; width:100%; margin: 20px; padding: 20px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius:6px; }
+header h1 { color: #0F204B; text-align:center; margin-bottom:5px; }
+header p { color: #444; text-align:center; margin-bottom:20px; font-size:16px; }
 
 /* Search Box */
-.search-box { display:flex; gap:10px; margin-bottom:10px; }
-.search-box input { flex:1; padding:10px; font-size:16px; border:1px solid #ccc; border-radius:4px; }
+.search-box { display:flex; gap:10px; margin-bottom:10px; justify-content:center; }
+.search-box input { flex:1; padding:10px; font-size:16px; border:1px solid #ccc; border-radius:4px; min-width:250px; }
 .search-box button { padding:10px 20px; background:#800000; color:#fff; border:none; border-radius:4px; cursor:pointer; }
 .search-box button:hover { background:#a00000; }
 
@@ -16,16 +16,16 @@ header p { color: #444; margin-bottom:20px; }
 .autocomplete-item:hover { background:#f0f0f0; }
 
 /* Loading & Error */
-.loading { color:#800000; margin:10px 0; }
-.error { color:red; margin:10px 0; }
+.loading { color:#800000; margin:10px 0; text-align:center; }
+.error { color:red; margin:10px 0; text-align:center; }
 
 /* Report Table */
-.report { width:100%; border-collapse: collapse; margin-top:15px; }
+.report { width:100%; border-collapse: collapse; margin-top:15px; display:none; }
 .report th, .report td { padding:10px; border:1px solid #ccc; text-align:left; }
 .report th { background:#f2f2f2; width:200px; }
 
 /* Buttons */
-.buttons { margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; }
+.buttons { margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
 .buttons button { padding:10px 15px; border:none; border-radius:4px; cursor:pointer; background:#800000; color:#fff; }
 .buttons button:hover { background:#a00000; }
 
@@ -43,3 +43,6 @@ header p { color: #444; margin-bottom:20px; }
 .modal table { width:100%; border-collapse: collapse; margin-top:10px; }
 .modal th, .modal td { border:1px solid #ccc; padding:8px; text-align:left; }
 .modal th { background:#f2f2f2; }
+
+/* Footer */
+footer { text-align:center; margin-top:20px; color:#8B8D8E; font-size:14px; }
