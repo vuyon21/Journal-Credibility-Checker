@@ -1,72 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UFS Journal Credibility Checker</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFS Journal Credibility Checker</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="container">
   <header>
     <h1>UFS Journal Credibility Checker</h1>
     <p>Evaluate journals for DHET accreditation, transformative agreements, Open Policy compliance, CrossRef license, and PubMed indexing.</p>
   </header>
 
   <main>
-    <section class="search-section">
-      <input type="text" id="journal-query" placeholder="Enter journal title or ISSN" />
+    <div class="search-box">
+      <input type="text" id="journal-query" placeholder="Enter journal title or ISSN">
       <button id="check-btn">Check</button>
-      <div id="autocomplete-results"></div>
-      <div id="loading-message" class="loading">Loading…</div>
-      <div id="error-message" class="error"></div>
-    </section>
+      <div id="autocomplete-results" class="autocomplete"></div>
+    </div>
 
-    <section id="report-section" class="report-section" style="display:none;">
-      <table class="report-table">
-        <tbody>
-          <tr><th>Journal Title</th><td id="info-title">—</td></tr>
-          <tr><th>ISSN / eISSN</th><td id="info-issn">—</td></tr>
-          <tr><th>Publisher</th><td id="info-publisher">—</td></tr>
-          <tr><th>Indexed In</th><td id="info-indexes">—</td></tr>
-          <tr><th>Transformative Agreement</th><td id="transformative-info">—</td></tr>
-          <tr><th>CrossRef License</th><td id="crossref-info">—</td></tr>
-          <tr><th>PubMed Articles</th><td id="pubmed-info">—</td></tr>
-          <tr><th>Status</th><td id="status-badge">—</td></tr>
-        </tbody>
-      </table>
+    <div id="loading-message" class="loading" style="display:none;">Loading...</div>
+    <div id="error-message" class="error" style="display:none;"></div>
 
-      <div class="report-buttons">
-        <button id="copy-report-btn">Copy Report</button>
-        <button id="download-report-btn">Download Report</button>
-        <button id="export-json">Export JSON</button>
-        <button id="show-removed-btn">Show Removed Journals</button>
-      </div>
-    </section>
+    <table id="journal-report" class="report" style="display:none;">
+      <tbody>
+        <tr><th>Journal Title</th><td id="info-title">—</td></tr>
+        <tr><th>ISSN / eISSN</th><td id="info-issn">—</td></tr>
+        <tr><th>Publisher</th><td id="info-publisher">—</td></tr>
+        <tr><th>Indexed In</th><td id="info-indexes">—</td></tr>
+        <tr><th>Transformative Agreement</th><td id="transformative-info">—</td></tr>
+        <tr><th>CrossRef License</th><td id="crossref-info">—</td></tr>
+        <tr><th>PubMed Articles</th><td id="pubmed-info">—</td></tr>
+        <tr><th>Status</th><td><span id="status-badge" class="badge">—</span></td></tr>
+      </tbody>
+    </table>
 
-    <section id="removed-modal" class="modal" aria-hidden="true">
-      <div class="modal-content">
-        <span id="close-removed" class="close">&times;</span>
-        <h2>Removed Journals</h2>
-        <table id="removed-table">
-          <thead>
-            <tr>
-              <th>Journal Title</th>
-              <th>ISSN</th>
-              <th>Year Removed</th>
-              <th>Last Review</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button id="copy-removed-btn">Copy Removed Journals</button>
-      </div>
-    </section>
+    <div class="buttons">
+      <button id="copy-report-btn">Copy Report</button>
+      <button id="download-report-btn">Download Report</button>
+      <button id="export-json">Export JSON</button>
+      <button id="show-removed-btn">Show Removed Journals</button>
+    </div>
   </main>
+
+  <div id="removed-modal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <span id="close-removed" class="close">&times;</span>
+      <h2>Removed Journals</h2>
+      <table id="removed-table">
+        <thead>
+          <tr><th>Journal Title</th><th>ISSN</th><th>Year Removed</th><th>Last Review</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="copy-removed-btn">Copy Removed Journals</button>
+    </div>
+  </div>
 
   <footer>
     <p>© University of the Free State. All rights reserved.</p>
   </footer>
+</div>
 
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
