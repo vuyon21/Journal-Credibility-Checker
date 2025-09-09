@@ -1,117 +1,118 @@
 :root {
   --ufs-blue: #003366;
   --ufs-gold: #ffcc00;
-  --ufs-grey: #f2f2f2;
-  --ufs-red: #cc0000;
+  --ufs-light: #f8f8f8;
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #fff;
-  color: #000;
-  margin: 0;
-  padding: 0;
+  font-family: Arial, sans-serif;
+  margin:0;
+  padding:0;
+  background-color: #f4f4f4;
+  color: #333;
 }
 
-.container {
-  max-width: 900px;
+header {
+  background-color: var(--ufs-blue);
+  color: var(--ufs-gold);
+  padding: 20px;
+  text-align: center;
+}
+
+header h1 { margin-bottom: 5px; }
+header p { margin-top: 0; font-weight: 400; }
+
+main {
+  max-width: 1000px;
   margin: 20px auto;
   padding: 0 15px;
 }
 
-header h1 {
-  color: var(--ufs-blue);
-  margin-bottom: 5px;
-}
-
-header .description {
-  font-size: 1rem;
-  color: #555;
+.search-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   margin-bottom: 20px;
 }
 
-.search-panel {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-#journal-query {
-  flex: 1;
+.search-section input {
+  width: 100%;
+  max-width: 400px;
   padding: 8px;
-  font-size: 1rem;
-}
-
-button {
-  background-color: var(--ufs-blue);
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 0.9rem;
+  margin-bottom: 5px;
+  border: 1px solid #ccc;
   border-radius: 4px;
 }
 
-button:hover {
-  background-color: var(--ufs-red);
-}
-
-.autocomplete {
+.autocomplete-results {
   position: absolute;
-  background: #fff;
+  background: white;
   border: 1px solid #ccc;
-  max-height: 180px;
-  overflow-y: auto;
+  max-width: 400px;
+  width: 100%;
   z-index: 10;
-  width: calc(100% - 30px);
 }
 
 .autocomplete-item {
-  padding: 5px;
+  padding: 5px 10px;
   cursor: pointer;
 }
 
 .autocomplete-item:hover {
-  background-color: var(--ufs-grey);
+  background-color: #eee;
 }
 
-.loading, .error {
-  margin: 10px 0;
-  padding: 10px;
+button {
+  background-color: var(--ufs-blue);
+  color: white;
+  border: none;
+  padding: 8px 15px;
   border-radius: 4px;
-  display: none;
+  cursor: pointer;
+  margin-top: 5px;
 }
 
-.loading { background: var(--ufs-grey); color: #333; }
-.error { background: var(--ufs-red); color: #fff; }
+button:hover {
+  background-color: var(--ufs-gold);
+  color: var(--ufs-blue);
+}
+
+.loading-message, .error-message {
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.error-message { color: red; }
+.loading-message { color: var(--ufs-blue); }
 
 .report-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .report-table th, .report-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
   text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
 }
 
-.report-buttons {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.report-actions {
+  margin-top: 15px;
 }
 
 .modal {
   display: none;
   position: fixed;
-  top:0; left:0; right:0; bottom:0;
-  background: rgba(0,0,0,0.6);
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.5);
   justify-content: center;
   align-items: center;
-  z-index: 100;
 }
 
 .modal-content {
@@ -120,26 +121,24 @@ button:hover {
   max-height: 80%;
   overflow-y: auto;
   width: 80%;
-  border-radius: 6px;
+  border-radius: 8px;
   position: relative;
 }
 
-.modal h2 {
-  margin-top:0;
-}
+.modal-content h2 { margin-top: 0; }
 
 .close {
   position: absolute;
-  top: 10px; right: 15px;
-  font-size: 1.5rem;
+  right: 15px;
+  top: 10px;
+  font-size: 25px;
   cursor: pointer;
 }
 
 footer {
   text-align: center;
-  padding: 15px 0;
-  margin-top: 30px;
-  background: var(--ufs-grey);
-  color: #333;
-  font-size: 0.9rem;
+  padding: 10px;
+  background: var(--ufs-blue);
+  color: var(--ufs-gold);
+  margin-top: 40px;
 }
