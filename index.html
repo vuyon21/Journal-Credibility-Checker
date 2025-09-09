@@ -1,67 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UFS Journal Credibility Checker</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFS Journal Credibility Checker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>UFS Journal Credibility Checker</h1>
-    <p>Evaluate journals for DHET accreditation, transformative agreements, Open Policy compliance, CrossRef license, and PubMed indexing.</p>
-  </header>
-
-  <main>
-    <div class="search-container">
-      <input type="text" id="journal-query" placeholder="Enter journal title or ISSN">
-      <button id="check-btn">Check</button>
-      <div id="autocomplete-results" class="autocomplete"></div>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-book-journal-whills"></i> UFS Journal Credibility Checker</h1>
+            <p class="subtitle">Verify journal credibility using 2025 accredited lists, transformative agreements, and real-time checks via Crossref, PubMed, and OpenAlex</p>
+        </header>
+        
+        <div class="search-container">
+            <div class="input-group">
+                <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN">
+                <select id="searchType">
+                    <option value="title">Search by Title</option>
+                    <option value="issn">Search by ISSN</option>
+                </select>
+                <button id="searchBtn"><i class="fas fa-search"></i> Search / Check</button>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-secondary" id="copyReportBtn"><i class="fas fa-copy"></i> Copy Report</button>
+                <button class="btn-secondary" id="downloadReportBtn"><i class="fas fa-download"></i> Download Report</button>
+                <button class="btn-success" id="showRemovedBtn"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
+                <button class="btn-success" id="copyRemovedBtn"><i class="fas fa-copy"></i> Copy Removed List</button>
+            </div>
+        </div>
+        
+        <div class="results-container" id="resultsContainer">
+            <!-- Results will be populated by JavaScript -->
+        </div>
+        
+        <footer>
+            <p>© 2025 - UFS | Journal Credibility Checker</p>
+        </footer>
     </div>
 
-    <div id="loading-message" class="loading">Loading...</div>
-    <div id="error-message" class="error"></div>
-
-    <table id="journal-report" class="report" style="display:none;">
-      <tbody>
-        <tr><th>Journal Title</th><td id="info-title">—</td></tr>
-        <tr><th>ISSN / eISSN</th><td id="info-issn">—</td></tr>
-        <tr><th>Publisher</th><td id="info-publisher">—</td></tr>
-        <tr><th>Indexed In</th><td id="info-indexes">—</td></tr>
-        <tr><th>Transformative Agreement</th><td id="transformative-info">—</td></tr>
-        <tr><th>CrossRef License</th><td id="crossref-info">—</td></tr>
-        <tr><th>PubMed Articles</th><td id="pubmed-info">—</td></tr>
-        <tr><th>Status</th><td><span id="status-badge" class="badge">—</span></td></tr>
-      </tbody>
-    </table>
-
-    <div class="buttons">
-      <button id="copy-report-btn">Copy Report</button>
-      <button id="download-report-btn">Download Report</button>
-      <button id="export-json">Export JSON</button>
-      <button id="show-removed-btn">Show Removed Journals</button>
-    </div>
-  </main>
-
-  <!-- Removed Journals Modal -->
-  <div id="removed-modal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <span id="close-removed" class="close">&times;</span>
-      <h2>Removed Journals</h2>
-      <table id="removed-table">
-        <thead>
-          <tr><th>Journal Title</th><th>ISSN</th><th>Year Removed</th><th>Date of Last Review</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button id="close-removed-bottom" class="close-btn">Close</button>
-    </div>
-  </div>
-
-  <footer>
-    <p>© University of the Free State. All rights reserved.</p>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
