@@ -1,10 +1,7 @@
-// JavaScript for the Journal Credibility Checker
 document.addEventListener('DOMContentLoaded', function() {
     const searchBtn = document.getElementById('searchBtn');
     const journalQuery = document.getElementById('journalQuery');
     const resultsContainer = document.getElementById('resultsContainer');
-    const copyReportBtn = document.getElementById('copyReportBtn');
-    const downloadReportBtn = document.getElementById('downloadReportBtn');
     const showRemovedBtn = document.getElementById('showRemovedBtn');
     const copyRemovedBtn = document.getElementById('copyRemovedBtn');
     
@@ -46,70 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let journalLists = { dhet: [], dhet2: [], doaj: [], ibss: [], norwegian: [], scielo: [], scopus: [], wos: [], removed: [] };
     let transformativeList = [];
-    
-    // Sample data for demonstration when CSV fetching fails
-    const sampleJournalData = {
-        'Nature': {
-            title: 'Nature',
-            issn: '0028-0836',
-            publisher: 'Springer Nature',
-            impactFactor: '64.8',
-            openAccess: 'Hybrid',
-            indexedIn: 'PubMed, Scopus, WOS',
-            accredited: 'Yes',
-            transformativeAgreement: 'Yes',
-            crossref: true,
-            pubmed: true,
-            openAlex: true,
-            lastUpdated: '2025-06-15'
-        },
-        'Science': {
-            title: 'Science',
-            issn: '0036-8075',
-            publisher: 'American Association for the Advancement of Science',
-            impactFactor: '63.7',
-            openAccess: 'Hybrid',
-            indexedIn: 'PubMed, Scopus, WOS',
-            accredited: 'Yes',
-            transformativeAgreement: 'No',
-            crossref: true,
-            pubmed: true,
-            openAlex: true,
-            lastUpdated: '2025-06-10'
-        },
-        'PLOS ONE': {
-            title: 'PLOS ONE',
-            issn: '1932-6203',
-            publisher: 'Public Library of Science',
-            impactFactor: '3.7',
-            openAccess: 'Full',
-            indexedIn: 'PubMed, Scopus, DOAJ',
-            accredited: 'Yes',
-            transformativeAgreement: 'Yes',
-            crossref: true,
-            pubmed: true,
-            openAlex: true,
-            lastUpdated: '2025-06-12'
-        }
-    };
-    
-    const sampleRemovedJournals = [
-        { title: 'Journal of Questionable Studies', issn: '1234-5678', year_removed: '2024', last_review_date: '2024-03-15' },
-        { title: 'International Journal of Non-credible Research', issn: '2345-6789', year_removed: '2023', last_review_date: '2023-06-22' },
-        { title: 'Quick Publication Review', issn: '3456-7890', year_removed: '2023', last_review_date: '2023-11-05' },
-        { title: 'Studies in Predatory Publishing', issn: '4567-8901', year_removed: '2022', last_review_date: '2022-09-30' },
-        { title: 'Fast Science Express', issn: '5678-9012', year_removed: '2022', last_review_date: '2022-01-18' }
-    ];
-    
-    // Sample transformative agreements
-    const sampleTransformativeAgreements = [
-        {
-            journal: 'Nature',
-            publisher: 'Springer Nature',
-            duration: '2023-2025',
-            link: 'https://sanlic.ac.za/springer/'
-        }
-    ];
     
     // Utility functions
     function showLoading(msg) { 
@@ -192,14 +125,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn('Failed loading', fname, e); 
                 // Load sample data if CSV loading fails
                 if (key === 'removed') {
-                    journalLists[key] = sampleRemovedJournals;
+                    journalLists[key] = [
+                        { title: 'Journal of Questionable Studies', issn: '1234-5678', year_removed: '2024', last_review_date: '2024-03-15' },
+                        { title: 'International Journal of Non-credible Research', issn: '2345-6789', year_removed: '2023', last_review_date: '2023-06-22' },
+                        { title: 'Quick Publication Review', issn: '3456-7890', year_removed: '2023', last_review_date: '2023-11-05' },
+                        { title: 'Studies in Predatory Publishing', issn: '4567-8901', year_removed: '2022', last_review_date: '2022-09-30' },
+                        { title: 'Fast Science Express', issn: '5678-9012', year_removed: '2022', last_review_date: '2022-01-18' }
+                    ];
                 } else {
                     // Convert sample data to CSV-like format
-                    journalLists[key] = Object.values(sampleJournalData).map(journal => ({
-                        title: journal.title,
-                        issn: journal.issn,
-                        publisher: journal.publisher
-                    }));
+                    journalLists[key] = [
+                        { title: 'Nature', issn: '0028-0836', publisher: 'Springer Nature' },
+                        { title: 'Science', issn: '0036-8075', publisher: 'American Association for the Advancement of Science' },
+                        { title: 'PLOS ONE', issn: '1932-6203', publisher: 'Public Library of Science' }
+                    ];
                 }
             }
         }
@@ -235,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!loadedSuccessfully) {
             showError('Using sample data. Could not load external CSV files due to CORS restrictions.');
         } else {
-            displaySampleData();
+            resultsContainer.innerHTML = '<p>Enter a journal name or ISSN to check its credibility.</p>';
         }
     }
     
@@ -389,20 +328,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     <tr>
                         <td class="info-label">Journal Title</td>
-                        <td>${data.title || 'N/A'}</td>
+                        <td>${data.title || data['journal title'] || data['journal'] || data.name || 'N/A'}</td>
                         <td rowspan="4"><span class="status-badge ${statusBadge}">${statusText}</span></td>
                     </tr>
                     <tr>
                         <td class="info-label">ISSN</td>
-                        <td>${data.issn || 'N/A'}</td>
+                        <td>${data.issn || data.ISSN || 'N/A'}</td>
                     </tr>
                     <tr>
                         <td class="info-label">Publisher</td>
-                        <td>${data.publisher || 'N/A'}</td>
+                        <td>${data.publisher || data.Publisher || 'N/A'}</td>
                     </tr>
                     <tr>
-                        <td class="info-label">Indexed In</td>
-                        <td>${data.indexedIn || 'N/A'}</td>
+                        <td class="info-label">Source</td>
+                        <td>${Object.keys(f).filter(k => f[k]).join(', ') || 'Not found in accredited lists'}</td>
                     </tr>
                 </tbody>
             </table>
@@ -482,46 +421,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>Title</th>
                         <th>ISSN</th>
                         <th>Year Removed</th>
-                        <th>Source</th>
+                        <th>Last Review Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${removedList.map(journal => `
                         <tr>
-                            <td>${journal.title || journal['journal title'] || 'N/A'}</td>
+                            <td>${journal.title || journal['journal title'] || journal['journal'] || journal.name || 'N/A'}</td>
                             <td>${journal.issn || journal.ISSN || 'N/A'}</td>
                             <td><span class="removed-year">${journal.year_removed || journal.year || 'N/A'}</span></td>
-                            <td>JOURNALS REMOVED IN PAST YEARS.csv</td>
+                            <td>${journal.last_review_date || 'N/A'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         `;
-    }
-    
-    function displaySampleData() {
-        const sampleData = sampleJournalData['Nature'];
-        const offlineHit = {
-            flags: {
-                dhet: true,
-                dhet2: true,
-                scopus: true,
-                wos: true,
-                doaj: false,
-                ibss: false,
-                scielo: false,
-                norwegian: false
-            },
-            sample: sampleData
-        };
-        
-        displayJournalData(
-            sampleData, 
-            offlineHit, 
-            null, 
-            'CrossRef data would appear here after live lookup',
-            'PubMed data would appear here after live lookup'
-        );
     }
     
     // Event handlers
@@ -541,8 +455,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Fetch live data
             const [crossrefInfo, pubmedInfo] = await Promise.all([
-                fetchCrossRefInfo(hit.issn),
-                fetchPubMedInfo(hit.title)
+                fetchCrossRefInfo(hit.issn || hit.ISSN),
+                fetchPubMedInfo(hit.title || hit['journal title'] || hit['journal'] || hit.name || query)
             ]);
             
             hideLoading();
@@ -553,23 +467,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    copyReportBtn.addEventListener('click', function() {
-        // In a real application, this would copy the report data
-        alert('Report copied to clipboard');
-    });
-    
-    downloadReportBtn.addEventListener('click', function() {
-        // In a real application, this would download the report
-        alert('Report downloaded as PDF');
-    });
-    
     showRemovedBtn.addEventListener('click', function() {
         displayRemovedJournals();
     });
     
     copyRemovedBtn.addEventListener('click', function() {
-        // In a real application, this would copy the removed journals list
-        alert('Removed journals list copied to clipboard');
+        const removedList = journalLists.removed || [];
+        let textToCopy = "Journals Removed from Accredited List:\n\n";
+        
+        removedList.forEach(journal => {
+            textToCopy += `• ${journal.title || journal['journal title'] || journal['journal'] || journal.name || 'N/A'} (${journal.issn || journal.ISSN || 'N/A'}) - Removed in ${journal.year_removed || journal.year || 'N/A'}\n`;
+        });
+        
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                // Show confirmation
+                const originalText = copyRemovedBtn.innerHTML;
+                copyRemovedBtn.innerHTML = '<i class="fas fa-check"></i> Copied to Clipboard!';
+                
+                setTimeout(() => {
+                    copyRemovedBtn.innerHTML = originalText;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy text to clipboard.');
+            });
+    });
+    
+    // Allow pressing Enter to search
+    journalQuery.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchBtn.click();
+        }
     });
     
     // Initialize the application
