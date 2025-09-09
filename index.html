@@ -8,17 +8,21 @@
 </head>
 <body>
 <div class="container">
-  <h1>UFS Journal Credibility Checker</h1>
+  <header>
+    <h1>UFS Journal Credibility Checker</h1>
+    <p class="description">Evaluates journal credibility via accredited DHET lists, Transformative Agreements, and live lookups from CrossRef and PubMed.</p>
+  </header>
+
   <div class="search-panel">
     <input type="text" id="journal-query" placeholder="Enter journal title or ISSN">
     <button id="check-btn">Check</button>
     <div id="autocomplete-results" class="autocomplete"></div>
   </div>
-  
+
   <div id="loading-message" class="loading">Loading journal lists...</div>
   <div id="error-message" class="error"></div>
 
-  <div id="report-section" style="display:none;">
+  <section id="report-section" style="display:none;">
     <table class="report-table">
       <tbody>
         <tr><th>Journal Title</th><td id="info-title">—</td></tr>
@@ -37,9 +41,10 @@
       <button id="export-json">Export JSON</button>
       <button id="show-removed-btn">Show Removed Journals</button>
     </div>
-  </div>
+  </section>
 </div>
 
+<!-- Removed Journals Modal -->
 <div id="removed-modal" class="modal" aria-hidden="true">
   <div class="modal-content">
     <span id="close-removed" class="close">&times;</span>
@@ -53,6 +58,10 @@
     <button id="copy-removed-btn">Copy Removed Journals</button>
   </div>
 </div>
+
+<footer>
+  <p>© 2025 University of the Free State. All rights reserved.</p>
+</footer>
 
 <script src="script.js"></script>
 </body>
