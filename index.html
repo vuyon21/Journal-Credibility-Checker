@@ -1,27 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UFS Journal Credibility Checker</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UFS Journal Credibility Checker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
   <header>
     <h1>UFS Journal Credibility Checker</h1>
     <p>Evaluate journals for DHET accreditation, transformative agreements, Open Policy compliance, CrossRef license, and PubMed indexing.</p>
   </header>
 
   <main>
-    <div class="search-box">
+    <div class="search-container">
       <input type="text" id="journal-query" placeholder="Enter journal title or ISSN">
       <button id="check-btn">Check</button>
       <div id="autocomplete-results" class="autocomplete"></div>
     </div>
 
-    <div id="loading-message" class="loading" style="display:none;">Loading...</div>
-    <div id="error-message" class="error" style="display:none;"></div>
+    <div id="loading-message" class="loading">Loading...</div>
+    <div id="error-message" class="error"></div>
 
     <table id="journal-report" class="report" style="display:none;">
       <tbody>
@@ -44,25 +43,25 @@
     </div>
   </main>
 
+  <!-- Removed Journals Modal -->
   <div id="removed-modal" class="modal" aria-hidden="true">
     <div class="modal-content">
       <span id="close-removed" class="close">&times;</span>
       <h2>Removed Journals</h2>
       <table id="removed-table">
         <thead>
-          <tr><th>Journal Title</th><th>ISSN</th><th>Year Removed</th><th>Last Review</th></tr>
+          <tr><th>Journal Title</th><th>ISSN</th><th>Year Removed</th><th>Date of Last Review</th></tr>
         </thead>
         <tbody></tbody>
       </table>
-      <button id="copy-removed-btn">Copy Removed Journals</button>
+      <button id="close-removed-bottom" class="close-btn">Close</button>
     </div>
   </div>
 
   <footer>
     <p>© University of the Free State. All rights reserved.</p>
   </footer>
-</div>
 
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
