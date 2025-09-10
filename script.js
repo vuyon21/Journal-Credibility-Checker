@@ -235,11 +235,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const qNorm = normalizeTitle(query);
         const issnQuery = isISSN(query) ? query.replace('-', '').toLowerCase() : null;
         const flags = {};
-        let sample = null;
         let foundIn = '';
         
         console.log(`Searching for: ${query}, Normalized: ${qNorm}, ISSN: ${issnQuery}`);
         
+        // Search through all lists
         for (const [key, arr] of Object.entries(journalLists)) {
             if (key === 'removed') continue;
             
@@ -256,40 +256,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Check for match by ISSN
                 if (issnQuery && issn === issnQuery) { 
                     flags[key] = true; 
-                    sample = j;
                     foundIn = key;
                     console.log(`Found by ISSN in ${key}:`, j);
-                    break; 
+                    break;
                 }
                 
                 // Check for match by exact title
                 if (title && titleNorm === qNorm) { 
                     flags[key] = true; 
-                    sample = j;
                     foundIn = key;
                     console.log(`Found by title in ${key}:`, j);
-                    break; 
+                    break;
                 }
                 
                 // Check for partial title match (for longer queries)
                 if (title && titleNorm.includes(qNorm) && qNorm.length > 3) {
                     flags[key] = true; 
-                    if (!sample) {
-                        sample = j;
-                        foundIn = key;
-                        console.log(`Found by partial title match in ${key}:`, j);
-                    }
+                    foundIn = key;
+                    console.log(`Found by partial title match in ${key}:`, j);
+                    break;
                 }
-            }
-            
-            // If we found a match, break early for efficiency
-            if (flags[key] && sample) {
-                break;
             }
         }
         
-        console.log('Search results:', { flags, sample, foundIn });
-        return { flags, sample, foundIn };
+        console.log('Search results:', { flags, foundIn });
+        return { flags, foundIn };
     }
     
     // Check if journal is in removed list
@@ -353,7 +344,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Search Europe PMC for articles from this specific journal
-            // Europe PMC includes PubMed content and provides a more reliable API
             const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}[Journal]&format=json`);
             if (!response.ok) {
                 throw new Error(`HTTP error: ${response.status}`);
@@ -372,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Display journal data and credibility assessment
-    function displayJournalData(data, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
+    function displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
         // Determine credibility status
         let statusBadge = '';
         let statusText = '';
@@ -396,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let transformativeInfo = 'No transformative agreement found';
         const transformativeMatch = transformativeList.find(t => {
             const tTitle = t.journal || t.title || t['journal title'] || '';
-            return normalizeTitle(tTitle) === normalizeTitle(data.title || '');
+            return normalizeTitle(tTitle) === normalizeTitle(query);
         });
         
         if (transformativeMatch) {
@@ -421,11 +411,6 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
-        // Extract journal information from various possible field names
-        const journalTitle = data.title || data['journal title'] || data['journal'] || data.name || 'N/A';
-        const journalISSN = data.issn || data.ISSN || data.eissn || data['e-issn'] || 'N/A';
-        const journalPublisher = data.publisher || data.Publisher || 'N/A';
-        
         // Build results HTML
         resultsContainer.innerHTML = `
             <table class="report-table">
@@ -438,16 +423,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     <tr>
                         <td class="info-label">Journal Title</td>
-                        <td>${journalTitle}</td>
-                        <td rowspan="4"><span class="status-badge ${statusBadge}">${statusText}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">ISSN</td>
-                        <td>${journalISSN}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Publisher</td>
-                        <td>${journalPublisher}</td>
+                        <td>${query}</td>
+                        <td rowspan="3"><span class="status-badge ${statusBadge}">${statusText}</span></td>
                     </tr>
                     <tr>
                         <td class="info-label">Found In</td>
@@ -465,7 +442,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     <tr>
                         <td class="info-label">DHET</td>
-                        <td><i class="fas fa-${f.dhet || f.dhet2 ? 'check-circle' : 'times-circle'}" style="color: ${f.dhet || f.dhet2 ? 'var(--success)' : 'var(--danger)'};"></i> ${f.dhet || f.dhet2 ? 'Found' : 'Not found'}</td>
+                        <td><i class="fas fa-${f.dhet ? 'check-circle' : 'times-circle'}" style="color: ${f.dhet ? 'var(--success)' : 'var(--danger)'};"></i> ${f.dhet ? 'Found' : 'Not found'}</td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">DHET 2</td>
+                        <td><i class="fas fa-${f.dhet2 ? 'check-circle' : 'times-circle'}" style="color: ${f.dhet2 ? 'var(--success)' : 'var(--danger)'};"></i> ${f.dhet2 ? 'Found' : 'Not found'}</td>
                     </tr>
                     <tr>
                         <td class="info-label">Scopus</td>
@@ -618,16 +599,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const offlineHit = findOffline(query);
             const removedHit = checkRemovedList(query);
-            const hit = offlineHit.sample || { title: query };
             
             // Fetch live data
             const [crossrefInfo, pubmedInfo] = await Promise.all([
-                fetchCrossRefInfo(hit.issn || hit.ISSN || hit.eissn),
-                fetchPubMedInfo(hit.title || hit['journal title'] || hit['journal'] || hit.name || query)
+                fetchCrossRefInfo(query),
+                fetchPubMedInfo(query)
             ]);
             
             hideLoading();
-            displayJournalData(hit, offlineHit, removedHit, crossrefInfo, pubmedInfo);
+            displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo);
         } catch (error) {
             console.error('Error during search:', error);
             showError('An error occurred during the search. Please try again.');
