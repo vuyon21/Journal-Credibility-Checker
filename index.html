@@ -56,3 +56,35 @@
     <script src="script.js"></script>
 </body>
 </html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Journal Credibility Checker</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Check Journal Credibility</h1>
+
+    <div class="card">
+      <input id="journalInput" type="text" placeholder="Enter Journal Title">
+      <button class="btn" onclick="checkCredibility()">Check Credibility</button>
+    </div>
+
+    <div id="results" class="card" style="display:none;">
+      <h2>Credibility Results</h2>
+      <table>
+        <thead>
+          <tr><th>Source</th><th>Status</th></tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
