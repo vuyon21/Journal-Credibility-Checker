@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="loading">
                 <div class="spinner"></div>
                 <p>${msg}</p>
-                <p id="progressText"></p>
+                <p id="progressText">Loading...</p>
             </div>
         `;
     }
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function isISSN(s) {
-        return /\b\d{4}-?\d{3}[\dXx]\b/.test(s);
+        return /\b\d{4}-?\d{3}[\dXx]\b/i.test(s);
     }
 
     // --- Fetch with Fallback ---
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!text) return [];
         text = text.replace(/^\uFEFF/, '');
         const lines = text.split(/\r?
-/).filter(l => l.trim().length > 0);
+/).filter(l => l.trim());
         if (lines.length === 0) return [];
 
         const headerLine = lines[0];
@@ -119,50 +119,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const pipeCount = (headerLine.match(/\|/g) || []).length;
         const delimiter = pipeCount > commaCount ? '|' : ',';
 
-        const headers = splitCSVLine(headerLine, delimiter).map(h => h.trim().toLowerCase());
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
         const rows = [];
 
         for (let i = 1; i < lines.length; i++) {
-            const parts = splitCSVLine(lines[i], delimiter);
+            const line = lines[i].replace(/,$/, ',');
+            const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
             const obj = {};
-            headers.forEach((h, j) => obj[h] = (parts[j] || '').trim().replace(/^"|"$/g, ''));
-            const hasContent = Object.values(obj).some(v => v !== '');
+            headers.forEach((h, j) => obj[h] = parts[j] || '');
+            const hasContent = Object.values(obj).some(v => v);
             if (hasContent) rows.push(obj);
         }
         return rows;
-    }
-
-    function splitCSVLine(line, delimiter = ',') {
-        const parts = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') {
-                if (inQuotes && line[i + 1] === '"') {
-                    current += '"';
-                    i++;
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (ch === delimiter && !inQuotes) {
-                parts.push(current);
-                current = '';
-            } else {
-                current += ch;
-            }
-        }
-        parts.push(current);
-        return parts;
-    }
-
-    function extractField(data, possibleNames) {
-        for (const n of possibleNames) {
-            if (data[n] !== undefined && data[n] !== null && String(data[n]).trim() !== '') {
-                return String(data[n]).trim();
-            }
-        }
-        return 'N/A';
     }
 
     // --- Load All Lists ---
@@ -184,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 journalLists[key] = [];
             } finally {
                 loadedCount++;
-                updateProgress(loadedCount, totalToLoad);
+                document.getElementById('progressText').textContent = `Loading... ${loadedCount}/${totalToLoad}`;
             }
         }
 
@@ -198,10 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 rows.forEach(r => {
                     transformativeList.push({
                         ...r,
-                        link: t.link,
-                        publisher: extractField(r, ['publisher', 'publishers', 'publisher name', 'publisher_name']),
-                        duration: extractField(r, ['agreement duration', 'duration', 'agreement_duration', 'agreement period', 'agreement_period']),
-                        journal: extractField(r, ['journal title', 'journal', 'journal_title', 'title', 'journal name', 'journal_name'])
+                        agreementLink: t.link,
+                        publisher: r.publisher || r['publisher name'] || 'Unknown',
+                        duration: r['agreement duration'] || r.duration || 'N/A',
+                        journalTitle: r['journal title'] || r.title || r.journal || ''
                     });
                 });
                 loadedSuccessfully = true;
@@ -209,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.warn('Failed to load transformative file', t.file, err);
             } finally {
                 loadedCount++;
-                updateProgress(loadedCount, totalToLoad);
+                document.getElementById('progressText').textContent = `Loading... ${loadedCount}/${totalToLoad}`;
             }
         }
 
@@ -220,15 +188,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function updateProgress(current, total) {
-        const el = document.getElementById('progressText');
-        if (el) el.textContent = `Loading... ${current}/${total} files`;
-    }
-
-    // --- Search Logic (Case-Insensitive, Partial Match) ---
+    // --- Search Logic ---
     function findOffline(query) {
         const qNorm = normalizeTitle(query);
-        const issnQueryRaw = isISSN(query) ? normalizeISSN(query) : null;
+        const issnQuery = isISSN(query) ? normalizeISSN(query) : null;
         const flags = {};
 
         for (const [key, arr] of Object.entries(journalLists)) {
@@ -240,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const issnField = row.issn || row['issn'] || row.eissn || row['e-issn'] || '';
                 const issnNorm = normalizeISSN(issnField);
 
-                if (issnQueryRaw && issnNorm && issnNorm === issnQueryRaw) {
+                if (issnQuery && issnNorm && issnNorm === issnQuery) {
                     flags[key] = true;
                     break;
                 }
@@ -273,12 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 const j = data.message;
-                let out = '';
-                if (j.title) out += `Title: ${j.title}<br>`;
-                if (j.publisher) out += `Publisher: ${j.publisher}<br>`;
-                if (j['total-dois']) out += `Total DOIs: ${j['total-dois']}<br>`;
-                if (j.license?.[0]) out += `License: <a href="${j.license[0].URL}" target="_blank">View</a><br>`;
-                return out || 'No additional info';
+                return `Title: ${j.title}<br>Publisher: ${j.publisher}`;
             } else {
                 const res = await fetch(`https://api.crossref.org/works?query.title=${encodeURIComponent(queryOrIssn)}&rows=1`);
                 if (!res.ok) throw new Error();
@@ -320,14 +278,14 @@ document.addEventListener('DOMContentLoaded', function () {
             statusText = 'Verify Manually';
         }
 
-        const tm = transformativeList.find(t => normalizeTitle(t.journal) === normalizeTitle(query));
+        const tm = transformativeList.find(t => normalizeTitle(t.journalTitle) === normalizeTitle(query));
         const transformativeInfo = tm ? `
             <div class="transformative-info">
                 <h4>Transformative Agreement Found</h4>
                 <div class="transformative-details">
-                    <div class="transformative-detail"><strong>Publisher:</strong> ${tm.publisher || 'N/A'}</div>
-                    <div class="transformative-detail"><strong>Duration:</strong> ${tm.duration || 'N/A'}</div>
-                    <div class="transformative-detail"><strong>Agreement:</strong> <a href="${tm.link}" target="_blank">View Agreement</a></div>
+                    <div class="transformative-detail"><strong>Publisher:</strong> ${tm.publisher}</div>
+                    <div class="transformative-detail"><strong>Duration:</strong> ${tm.duration}</div>
+                    <div class="transformative-detail"><strong>Agreement:</strong> <a href="${tm.agreementLink}" target="_blank">View Agreement</a></div>
                 </div>
             </div>
         ` : '<div>No transformative agreement found</div>';
