@@ -94,14 +94,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
         if (lines.length < 2) return [];
         
-        // Detect delimiter
-        const delimiter = (lines[0].split('|').length > lines[0].split(',').length) ? '|' : ',';
+        // Detect delimiter (try comma first, then pipe)
+        let delimiter = ',';
+        if (lines[0].split('|').length > lines[0].split(',').length) {
+            delimiter = '|';
+        }
+        
         const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
         
         return lines.slice(1).map(line => {
-            const parts = line.split(delimiter).map(p => p.trim());
+            // Handle quoted fields that might contain commas
+            const parts = [];
+            let inQuotes = false;
+            let currentPart = '';
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === delimiter && !inQuotes) {
+                    parts.push(currentPart.trim());
+                    currentPart = '';
+                } else {
+                    currentPart += char;
+                }
+            }
+            parts.push(currentPart.trim());
+            
             const obj = {};
-            headers.forEach((h, i) => { obj[h] = parts[i] || ''; });
+            headers.forEach((h, i) => { 
+                // Remove quotes from field values
+                obj[h] = (parts[i] || '').replace(/^"|"$/g, ''); 
+            });
             return obj;
         });
     }
@@ -133,6 +158,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     loadedSuccessfully = true;
                     loadedCount++;
                     updateProgress(loadedCount, totalToLoad);
+                    console.log(`Loaded ${key} with ${journalLists[key].length} entries`);
+                    
+                    // Special handling for removed journals file
+                    if (key === 'removed' && journalLists[key].length > 0) {
+                        console.log('Removed journals sample:', journalLists[key][0]);
+                    }
                 } else {
                     throw new Error(`HTTP ${res.status}`);
                 }
@@ -165,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     });
                     loadedSuccessfully = true;
+                    console.log(`Loaded transformative file ${t.file} with ${rows.length} entries`);
                 } else {
                     throw new Error(`HTTP ${res.status}`);
                 }
@@ -192,41 +224,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Search functions
+    // Enhanced search function to find journals across all CSV files
     function findOffline(query) {
         const qNorm = normalizeTitle(query);
         const issnQuery = isISSN(query) ? query.replace('-', '').toLowerCase() : null;
         const flags = {};
         let sample = null;
+        let foundIn = '';
+        
+        console.log(`Searching for: ${query}, Normalized: ${qNorm}, ISSN: ${issnQuery}`);
         
         for (const [key, arr] of Object.entries(journalLists)) {
             if (key === 'removed') continue;
+            
             flags[key] = false;
+            
             for (const j of arr) {
-                const title = j.title || j['journal title'] || j['journal'] || j.name || '';
-                const issn = (j.issn || j['issn'] || '').replace('-', '').toLowerCase();
+                // Try multiple possible field names for title
+                const title = j.title || j['journal title'] || j['journal'] || j.name || j['journal name'] || '';
+                const titleNorm = normalizeTitle(title);
                 
+                // Try multiple possible field names for ISSN
+                const issn = (j.issn || j['issn'] || j.eissn || j['e-issn'] || j['eissn'] || '').replace('-', '').toLowerCase();
+                
+                // Check if we have a match by ISSN
                 if (issnQuery && issn === issnQuery) { 
                     flags[key] = true; 
-                    sample = j; 
+                    sample = j;
+                    foundIn = key;
+                    console.log(`Found by ISSN in ${key}:`, j);
                     break; 
                 }
-                if (title && normalizeTitle(title) === qNorm) { 
+                
+                // Check if we have a match by title
+                if (title && titleNorm === qNorm) { 
                     flags[key] = true; 
-                    sample = j; 
+                    sample = j;
+                    foundIn = key;
+                    console.log(`Found by title in ${key}:`, j);
                     break; 
+                }
+                
+                // Additional check: partial match for titles
+                if (title && titleNorm.includes(qNorm) && qNorm.length > 3) {
+                    flags[key] = true; 
+                    if (!sample) { // Only set sample if not already found
+                        sample = j;
+                        foundIn = key;
+                        console.log(`Found by partial title match in ${key}:`, j);
+                    }
                 }
             }
+            
+            // If we found a match in this list, break early for efficiency
+            if (flags[key] && sample) {
+                break;
+            }
         }
-        return { flags, sample };
+        
+        console.log('Search results:', { flags, sample, foundIn });
+        return { flags, sample, foundIn };
     }
     
     function checkRemovedList(query) {
         const qNorm = normalizeTitle(query);
-        return journalLists.removed.find(j => {
+        const removedList = journalLists.removed || [];
+        
+        for (const j of removedList) {
             const title = j.title || j['journal title'] || j['journal'] || j.name || '';
-            return normalizeTitle(title) === qNorm;
-        });
+            if (normalizeTitle(title) === qNorm) {
+                return j;
+            }
+        }
+        return null;
     }
     
     // Live API lookups
@@ -275,7 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Using a more reliable approach for PubMed data
-            const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}&format=json`);
+            // Note: PubMed doesn't have a direct journal API, so we search for articles from the journal
+            const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}[Journal]&format=json`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -342,6 +413,11 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
+        // Extract title from various possible field names
+        const journalTitle = data.title || data['journal title'] || data['journal'] || data.name || 'N/A';
+        const journalISSN = data.issn || data.ISSN || data.eissn || data['e-issn'] || 'N/A';
+        const journalPublisher = data.publisher || data.Publisher || 'N/A';
+        
         resultsContainer.innerHTML = `
             <table class="report-table">
                 <thead>
@@ -353,20 +429,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     <tr>
                         <td class="info-label">Journal Title</td>
-                        <td>${data.title || data['journal title'] || data['journal'] || data.name || 'N/A'}</td>
+                        <td>${journalTitle}</td>
                         <td rowspan="4"><span class="status-badge ${statusBadge}">${statusText}</span></td>
                     </tr>
                     <tr>
                         <td class="info-label">ISSN</td>
-                        <td>${data.issn || data.ISSN || 'N/A'}</td>
+                        <td>${journalISSN}</td>
                     </tr>
                     <tr>
                         <td class="info-label">Publisher</td>
-                        <td>${data.publisher || data.Publisher || 'N/A'}</td>
+                        <td>${journalPublisher}</td>
                     </tr>
                     <tr>
-                        <td class="info-label">Source</td>
-                        <td>${Object.keys(f).filter(k => f[k]).join(', ') || 'Not found in accredited lists'}</td>
+                        <td class="info-label">Found In</td>
+                        <td>${offlineHit.foundIn || Object.keys(f).filter(k => f[k]).join(', ') || 'Not found in accredited lists'}</td>
                     </tr>
                 </tbody>
             </table>
@@ -435,34 +511,38 @@ document.addEventListener('DOMContentLoaded', function() {
         const removedList = journalLists.removed || [];
         
         if (removedList.length === 0) {
-            resultsContainer.innerHTML = '<p>No removed journals data available or failed to load.</p>';
+            resultsContainer.innerHTML = '<p>No removed journals data available or failed to load. Please try again.</p>';
             return;
         }
         
+        // Get all possible column names from the first item
+        const firstItem = removedList[0];
+        const columns = Object.keys(firstItem);
+        
+        // Filter out empty columns
+        const nonEmptyColumns = columns.filter(col => {
+            return removedList.some(item => item[col] && item[col].trim() !== '');
+        });
+        
         resultsContainer.innerHTML = `
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th colspan="4">Removed from Accredited List (Historical)</th>
-                    </tr>
-                    <tr>
-                        <th>Title</th>
-                        <th>ISSN</th>
-                        <th>Year Removed</th>
-                        <th>Last Review Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${removedList.map(journal => `
+            <h3>Journals Removed from Accredited List</h3>
+            <p>Showing ${removedList.length} journals removed from the accredited list in past years.</p>
+            <div class="table-container">
+                <table class="report-table">
+                    <thead>
                         <tr>
-                            <td>${journal.title || journal['journal title'] || journal['journal'] || journal.name || 'N/A'}</td>
-                            <td>${journal.issn || journal.ISSN || 'N/A'}</td>
-                            <td><span class="removed-year">${journal.year_removed || journal.year || 'N/A'}</span></td>
-                            <td>${journal.last_review_date || 'N/A'}</td>
+                            ${nonEmptyColumns.map(col => `<th>${col.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}
                         </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${removedList.map(journal => `
+                            <tr>
+                                ${nonEmptyColumns.map(col => `<td>${journal[col] || 'N/A'}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
     
@@ -483,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Fetch live data
             const [crossrefInfo, pubmedInfo] = await Promise.all([
-                fetchCrossRefInfo(hit.issn || hit.ISSN),
+                fetchCrossRefInfo(hit.issn || hit.ISSN || hit.eissn),
                 fetchPubMedInfo(hit.title || hit['journal title'] || hit['journal'] || hit.name || query)
             ]);
             
@@ -497,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     showRemovedBtn.addEventListener('click', function() {
         displayRemovedJournals();
-    }
+    });
     
     copyRemovedBtn.addEventListener('click', function() {
         const removedList = journalLists.removed || [];
@@ -507,26 +587,44 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        let textToCopy = "Journals Removed from Accredited List:\n\n";
+        // Get all possible column names from the first item
+        const firstItem = removedList[0];
+        const columns = Object.keys(firstItem);
         
-        removedList.forEach(journal => {
-            textToCopy += `• ${journal.title || journal['journal title'] || journal['journal'] || journal.name || 'N/A'} (${journal.issn || journal.ISSN || 'N/A'}) - Removed in ${journal.year_removed || journal.year || 'N/A'}\n`;
+        // Filter out empty columns
+        const nonEmptyColumns = columns.filter(col => {
+            return removedList.some(item => item[col] && item[col].trim() !== '');
         });
         
-        navigator.clipboard.writeText(textToCopy)
-            .then(() => {
-                // Show confirmation
-                const originalText = copyRemovedBtn.innerHTML;
-                copyRemovedBtn.innerHTML = '<i class="fas fa-check"></i> Copied to Clipboard!';
-                
-                setTimeout(() => {
-                    copyRemovedBtn.innerHTML = originalText;
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Failed to copy: ', err);
-                alert('Failed to copy text to clipboard.');
-            });
+        // Create CSV content
+        let csvContent = nonEmptyColumns.join(',') + '\n';
+        removedList.forEach(journal => {
+            const row = nonEmptyColumns.map(col => {
+                const value = journal[col] || '';
+                // Handle values that might contain commas
+                return `"${value.replace(/"/g, '""')}"`;
+            }).join(',');
+            csvContent += row + '\n';
+        });
+        
+        // Create a Blob and download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'removed_journals.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show confirmation
+        const originalText = copyRemovedBtn.innerHTML;
+        copyRemovedBtn.innerHTML = '<i class="fas fa-check"></i> Downloaded CSV!';
+        
+        setTimeout(() => {
+            copyRemovedBtn.innerHTML = originalText;
+        }, 2000);
     });
     
     // Allow pressing Enter to search
