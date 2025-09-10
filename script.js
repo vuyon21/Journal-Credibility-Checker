@@ -1,16 +1,15 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Get DOM elements
+document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchBtn');
     const journalQuery = document.getElementById('journalQuery');
     const resultsContainer = document.getElementById('resultsContainer');
     const showRemovedBtn = document.getElementById('showRemovedBtn');
     const copyRemovedBtn = document.getElementById('copyRemovedBtn');
 
-    // Configuration for data sources - FIXED: Removed trailing spaces
+    // Try direct GitHub raw first, fallback to CORS proxy
     const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
     const RAW_BASE = 'https://raw.githubusercontent.com/vuyon21/Journal-Credibility-Checker/main/';
 
-    // Accredited journal list file names
+    // Accredited lists
     const FILENAMES = {
         dhet: 'DHET_2025.csv',
         dhet2: 'DHET_2_2025.csv',
@@ -23,41 +22,31 @@ document.addEventListener('DOMContentLoaded', function() {
         removed: 'JOURNALS REMOVED IN PAST YEARS.csv'
     };
 
-    // Transformative agreements data files
+    // Transformative agreements with SANLiC links
     const TRANSFORMATIVE_FILES = [
-        {file: 'WILEY_2025.csv', link: 'https://sanlic.ac.za/wiley/'},
-        {file: 'The Company of Biologists_2025.csv', link: 'https://sanlic.ac.za/the-company-of-biologists/'},
-        {file: 'Taylor & Francis_2025.csv', link: 'https://sanlic.ac.za/taylor-francis/'},
-        {file: 'Springer_2025.csv', link: 'https://sanlic.ac.za/springer/'},
-        {file: 'ScienceDirect (Elsevier)_2025.csv', link: 'https://sanlic.ac.za/sciencedirect-elsevier/'},
-        {file: 'SAGE Publishing_2025.csv', link: 'https://sanlic.ac.za/sage-publishing/'},
-        {file: 'Royal Society_2025.csv', link: 'https://sanlic.ac.za/royal-society/'},
-        {file: 'Royal Society of Chemistry Platinum_2025.csv', link: 'https://sanlic.ac.za/royal-society-of-chemistry/'},
-        {file: 'Oxford University Press Journals_2025.csv', link: 'https://sanlic.ac.za/oxford-university-press-journals/'},
-        {file: 'IOPscienceExtra_2025.csv', link: 'https://sanlic.ac.za/iopscience-extra/'},
-        {file: 'Emerald_2025.csv', link: 'https://sanlic.ac.za/emerald/'},
-        {file: 'Cambridge University Press (CUP)_2025.csv', link: 'https://sanlic.ac.za/cambridge-university-press/'},
-        {file: 'Bentham Science Publishers_2025.csv', link: 'https://sanlic.ac.za/bentham-science-publishers-2/'},
-        {file: 'Association for Computing Machinery (ACM)_2025.csv', link: 'https://sanlic.ac.za/association-for-computing-machinery-acm/'},
-        {file: 'American Institute of Physics (AIP)_2025.csv', link: 'https://sanlic.ac.za/american-institute-of-physics-2/'},
-        {file: 'American Chemical Society (ACS)_2025.csv', link: 'https://sanlic.ac.za/american-chemical-society-acs/'}
+        { file: 'WILEY_2025.csv', link: 'https://sanlic.ac.za/wiley/' },
+        { file: 'The Company of Biologists_2025.csv', link: 'https://sanlic.ac.za/the-company-of-biologists/' },
+        { file: 'Taylor & Francis_2025.csv', link: 'https://sanlic.ac.za/taylor-francis/' },
+        { file: 'Springer_2025.csv', link: 'https://sanlic.ac.za/springer/' },
+        { file: 'ScienceDirect (Elsevier)_2025.csv', link: 'https://sanlic.ac.za/sciencedirect-elsevier/' },
+        { file: 'SAGE Publishing_2025.csv', link: 'https://sanlic.ac.za/sage-publishing/' },
+        { file: 'Royal Society_2025.csv', link: 'https://sanlic.ac.za/royal-society/' },
+        { file: 'Royal Society of Chemistry Platinum_2025.csv', link: 'https://sanlic.ac.za/royal-society-of-chemistry/' },
+        { file: 'Oxford University Press Journals_2025.csv', link: 'https://sanlic.ac.za/oxford-university-press-journals/' },
+        { file: 'IOPscienceExtra_2025.csv', link: 'https://sanlic.ac.za/iopscience-extra/' },
+        { file: 'Emerald_2025.csv', link: 'https://sanlic.ac.za/emerald/' },
+        { file: 'Cambridge University Press (CUP)_2025.csv', link: 'https://sanlic.ac.za/cambridge-university-press/' },
+        { file: 'Bentham Science Publishers_2025.csv', link: 'https://sanlic.ac.za/bentham-science-publishers-2/' },
+        { file: 'Association for Computing Machinery (ACM)_2025.csv', link: 'https://sanlic.ac.za/association-for-computing-machinery-acm/' },
+        { file: 'American Institute of Physics (AIP)_2025.csv', link: 'https://sanlic.ac.za/american-institute-of-physics-2/' },
+        { file: 'American Chemical Society (ACS)_2025.csv', link: 'https://sanlic.ac.za/american-chemical-society-acs/' }
     ];
 
-    // Data storage for loaded journal lists
-    let journalLists = {
-        dhet: [],
-        dhet2: [],
-        doaj: [],
-        ibss: [],
-        norwegian: [],
-        scielo: [],
-        scopus: [],
-        wos: [],
-        removed: []
-    };
+    let journalLists = { dhet: [], dhet2: [], doaj: [], ibss: [], norwegian: [], scielo: [], scopus: [], wos: [], removed: [] };
     let transformativeList = [];
+    let isRemovedVisible = false;
 
-    // Display loading state with message
+    // --- UI Helpers ---
     function showLoading(msg) {
         resultsContainer.innerHTML = `
             <div class="loading">
@@ -68,13 +57,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // Hide loading state - FIXED: Actually clear the loading content
-    function hideLoading() {
-        // This function should clear the loading indicator
-        // It will be replaced by actual content, but we ensure it's ready
-    }
-
-    // Display error message with retry option
     function showError(msg) {
         resultsContainer.innerHTML = `
             <div class="loading">
@@ -85,145 +67,152 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
         `;
-        // Add event listener to try again button
-        document.getElementById('tryAgainBtn').addEventListener('click', function() {
+        document.getElementById('tryAgainBtn').addEventListener('click', () => {
             journalQuery.value = '';
             journalQuery.focus();
             loadAllLists();
         });
     }
 
-    // Normalize text for comparison (lowercase, remove special chars)
+    // --- Text Normalization ---
     function normalizeTitle(t) {
-        return (t || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+        return (t || '').toLowerCase().replace(/\uFEFF/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    // Check if string is a valid ISSN format
+    function normalizeISSN(s) {
+        if (!s) return '';
+        return s.toString().toUpperCase().replace(/[^0-9X]/g, '');
+    }
+
     function isISSN(s) {
         return /\b\d{4}-?\d{3}[\dXx]\b/.test(s);
     }
 
-    // Generate URL for CSV file with CORS proxy - FIXED: No trailing spaces
-    function rawUrlFor(fname) {
-        return CORS_PROXY + RAW_BASE + encodeURIComponent(fname);
-    }
-
-    // Parse CSV text into array of objects
-    function parseCSV(text) {
-        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-        if (lines.length < 2) return [];
-
-        // Detect delimiter (comma or pipe)
-        let delimiter = ',';
-        if (lines[0].split('|').length > lines[0].split(',').length) {
-            delimiter = '|';
+    // --- Fetch with Fallback ---
+    async function fetchWithFallback(url) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Direct fetch failed: ${res.status}`);
+            return res;
+        } catch (err) {
+            console.warn('Direct fetch failed, trying CORS proxy:', err);
+            const res = await fetch(CORS_PROXY + url);
+            if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
+            return res;
         }
-
-        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
-
-        return lines.slice(1).map(line => {
-            // Handle quoted fields that might contain delimiters
-            const parts = [];
-            let inQuotes = false;
-            let currentPart = '';
-
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === delimiter && !inQuotes) {
-                    parts.push(currentPart.trim());
-                    currentPart = '';
-                } else {
-                    currentPart += char;
-                }
-            }
-            parts.push(currentPart.trim());
-
-            const obj = {};
-            headers.forEach((h, i) => {
-                // Remove quotes from field values
-                obj[h] = (parts[i] || '').replace(/^"|"$/g, '');
-            });
-
-            return obj;
-        });
     }
 
-    // Extract field value using possible header names
-    function extractField(data, possibleFieldNames) {
-        for (const field of possibleFieldNames) {
-            if (data[field] !== undefined && data[field] !== '') {
-                return data[field];
+    function rawUrlFor(fname) {
+        return RAW_BASE + encodeURIComponent(fname);
+    }
+
+    // --- Robust CSV Parser ---
+    function parseCSV(text) {
+        if (!text) return [];
+        text = text.replace(/^\uFEFF/, '');
+        const lines = text.split(/\r?
+/).filter(l => l.trim().length > 0);
+        if (lines.length === 0) return [];
+
+        const headerLine = lines[0];
+        const commaCount = (headerLine.match(/,/g) || []).length;
+        const pipeCount = (headerLine.match(/\|/g) || []).length;
+        const delimiter = pipeCount > commaCount ? '|' : ',';
+
+        const headers = splitCSVLine(headerLine, delimiter).map(h => h.trim().toLowerCase());
+        const rows = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const parts = splitCSVLine(lines[i], delimiter);
+            const obj = {};
+            headers.forEach((h, j) => obj[h] = (parts[j] || '').trim().replace(/^"|"$/g, ''));
+            const hasContent = Object.values(obj).some(v => v !== '');
+            if (hasContent) rows.push(obj);
+        }
+        return rows;
+    }
+
+    function splitCSVLine(line, delimiter = ',') {
+        const parts = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (ch === delimiter && !inQuotes) {
+                parts.push(current);
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+        parts.push(current);
+        return parts;
+    }
+
+    function extractField(data, possibleNames) {
+        for (const n of possibleNames) {
+            if (data[n] !== undefined && data[n] !== null && String(data[n]).trim() !== '') {
+                return String(data[n]).trim();
             }
         }
         return 'N/A';
     }
 
-    // Load all CSV files from GitHub
+    // --- Load All Lists ---
     async function loadAllLists() {
         showLoading('Loading journal lists...');
         let loadedSuccessfully = false;
         let loadedCount = 0;
         const totalToLoad = Object.keys(FILENAMES).length + TRANSFORMATIVE_FILES.length;
 
-        // Load accredited journal lists
         for (const [key, fname] of Object.entries(FILENAMES)) {
             try {
-                const res = await fetch(rawUrlFor(fname));
-                if (res.ok) {
-                    const text = await res.text();
-                    journalLists[key] = parseCSV(text);
-                    loadedSuccessfully = true;
-                    loadedCount++;
-                    updateProgress(loadedCount, totalToLoad);
-                    console.log(`Loaded ${key} with ${journalLists[key].length} entries`);
-                    
-                    // Special logging for removed journals
-                    if (key === 'removed' && journalLists[key].length > 0) {
-                        console.log('Removed journals sample:', journalLists[key][0]);
-                    }
-                } else {
-                    throw new Error(`HTTP error: ${res.status}`);
-                }
-            } catch(e) {
-                console.warn('Failed to load', fname, e);
+                const url = rawUrlFor(fname);
+                const res = await fetchWithFallback(url);
+                const text = await res.text();
+                journalLists[key] = parseCSV(text);
+                loadedSuccessfully = true;
+            } catch (err) {
+                console.warn('Failed to load', fname, err);
                 journalLists[key] = [];
+            } finally {
                 loadedCount++;
                 updateProgress(loadedCount, totalToLoad);
             }
         }
 
-        // Load transformative agreements data
         transformativeList = [];
         for (const t of TRANSFORMATIVE_FILES) {
             try {
-                const res = await fetch(rawUrlFor(t.file));
-                if (res.ok) {
-                    const text = await res.text();
-                    const rows = parseCSV(text);
-                    rows.forEach(r => {
-                        transformativeList.push({
-                            ...r,
-                            link: t.link,
-                            publisher: extractField(r, ['publisher', 'publishers', 'publisher name', 'publisher_name']),
-                            duration: extractField(r, ['agreement duration', 'duration', 'agreement_duration', 'agreement period', 'agreement_period']),
-                            journal: extractField(r, ['journal title', 'journal', 'journal_title', 'title', 'journal name', 'journal_name'])
-                        });
+                const url = rawUrlFor(t.file);
+                const res = await fetchWithFallback(url);
+                const text = await res.text();
+                const rows = parseCSV(text);
+                rows.forEach(r => {
+                    transformativeList.push({
+                        ...r,
+                        link: t.link,
+                        publisher: extractField(r, ['publisher', 'publishers', 'publisher name', 'publisher_name']),
+                        duration: extractField(r, ['agreement duration', 'duration', 'agreement_duration', 'agreement period', 'agreement_period']),
+                        journal: extractField(r, ['journal title', 'journal', 'journal_title', 'title', 'journal name', 'journal_name'])
                     });
-                    loadedSuccessfully = true;
-                    console.log(`Loaded transformative file ${t.file} with ${rows.length} entries`);
-                } else {
-                    throw new Error(`HTTP error: ${res.status}`);
-                }
-            } catch(e) {
-                console.warn('Failed to load transformative file', t.file, e);
+                });
+                loadedSuccessfully = true;
+            } catch (err) {
+                console.warn('Failed to load transformative file', t.file, err);
+            } finally {
+                loadedCount++;
+                updateProgress(loadedCount, totalToLoad);
             }
-            loadedCount++;
-            updateProgress(loadedCount, totalToLoad);
         }
 
-        hideLoading();
         if (!loadedSuccessfully) {
             showError('Could not load external CSV files. Please click "Try Again" to reload.');
         } else {
@@ -231,154 +220,95 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Update progress indicator during loading
     function updateProgress(current, total) {
-        const progressElement = document.getElementById('progressText');
-        if (progressElement) {
-            progressElement.textContent = `Loading... ${current}/${total} files`;
-        }
+        const el = document.getElementById('progressText');
+        if (el) el.textContent = `Loading... ${current}/${total} files`;
     }
 
-    // Search for journal across all loaded CSV files
+    // --- Search Logic (Case-Insensitive, Partial Match) ---
     function findOffline(query) {
         const qNorm = normalizeTitle(query);
-        const issnQuery = isISSN(query) ? query.replace('-', '').toLowerCase() : null;
+        const issnQueryRaw = isISSN(query) ? normalizeISSN(query) : null;
         const flags = {};
-        let foundIn = '';
-        console.log(`Searching for: ${query}, Normalized: ${qNorm}, ISSN: ${issnQuery}`);
 
-        // Search through all lists
         for (const [key, arr] of Object.entries(journalLists)) {
             if (key === 'removed') continue;
             flags[key] = false;
-            
-            for (const j of arr) {
-                // Try multiple possible field names for title
-                const title = j.title || j['journal title'] || j['journal'] || j.name || j['journal name'] || '';
+            for (const row of arr) {
+                const title = row.title || row['journal title'] || row['journal'] || row.name || '';
                 const titleNorm = normalizeTitle(title);
+                const issnField = row.issn || row['issn'] || row.eissn || row['e-issn'] || '';
+                const issnNorm = normalizeISSN(issnField);
 
-                // Try multiple possible field names for ISSN
-                const issn = (j.issn || j['issn'] || j.eissn || j['e-issn'] || j['eissn'] || '').replace('-', '').toLowerCase();
-
-                // Check for match by ISSN
-                if (issnQuery && issn === issnQuery) {
+                if (issnQueryRaw && issnNorm && issnNorm === issnQueryRaw) {
                     flags[key] = true;
-                    foundIn = key;
-                    console.log(`Found by ISSN in ${key}:`, j);
                     break;
                 }
-
-                // Check for match by exact title
-                if (title && titleNorm === qNorm) {
+                if (title && titleNorm.includes(qNorm)) {
                     flags[key] = true;
-                    foundIn = key;
-                    console.log(`Found by title in ${key}:`, j);
-                    break;
-                }
-
-                // Check for partial title match (for longer queries)
-                if (title && titleNorm.includes(qNorm) && qNorm.length > 3) {
-                    flags[key] = true;
-                    foundIn = key;
-                    console.log(`Found by partial title match in ${key}:`, j);
                     break;
                 }
             }
         }
-
-        console.log('Search results:', { flags, foundIn });
-        return { flags, foundIn };
+        return { flags };
     }
 
-    // Check if journal is in removed list
     function checkRemovedList(query) {
         const qNorm = normalizeTitle(query);
-        const removedList = journalLists.removed || [];
-        
-        for (const j of removedList) {
-            const title = j.title || j['journal title'] || j['journal'] || j.name || '';
-            if (normalizeTitle(title) === qNorm) {
-                return j;
-            }
+        const removed = journalLists.removed || [];
+        for (const row of removed) {
+            const title = row.title || row['journal title'] || row['journal'] || row.name || '';
+            if (normalizeTitle(title) === qNorm) return row;
         }
         return null;
     }
 
-    // Fetch journal information from CrossRef API - FIXED: Removed space in URL
-    async function fetchCrossRefInfo(issn) {
-        if (!issn || issn === '—') {
-            return 'No ISSN available for lookup';
-        }
-        
+    // --- Live API Lookups ---
+    async function fetchCrossRefInfo(queryOrIssn) {
         try {
-            const cleanISSN = issn.replace('-', ''); // Clean the ISSN
-            const response = await fetch(`https://api.crossref.org/journals/${cleanISSN}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.status === 'ok' && data.message) {
-                const journal = data.message;
-                let result = '';
-                
-                if (journal.title) {
-                    result += `Title: ${journal.title}<br>`;
-                }
-                if (journal.publisher) {
-                    result += `Publisher: ${journal.publisher}<br>`;
-                }
-                if (journal.license && journal.license.length > 0) {
-                    result += `License: <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
-                }
-                
-                return result || 'No additional information available';
+            if (isISSN(queryOrIssn)) {
+                const issn = normalizeISSN(queryOrIssn);
+                const formatted = issn.length === 8 ? `${issn.slice(0,4)}-${issn.slice(4)}` : queryOrIssn;
+                const res = await fetch(`https://api.crossref.org/journals/${formatted}`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                const j = data.message;
+                let out = '';
+                if (j.title) out += `Title: ${j.title}<br>`;
+                if (j.publisher) out += `Publisher: ${j.publisher}<br>`;
+                if (j['total-dois']) out += `Total DOIs: ${j['total-dois']}<br>`;
+                if (j.license?.[0]) out += `License: <a href="${j.license[0].URL}" target="_blank">View</a><br>`;
+                return out || 'No additional info';
             } else {
-                return 'Journal not found in CrossRef';
+                const res = await fetch(`https://api.crossref.org/works?query.title=${encodeURIComponent(queryOrIssn)}&rows=1`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                const item = data.message.items[0];
+                return `Sample DOI: ${item.DOI || 'N/A'} — Title: ${item.title?.[0] || 'N/A'}`;
             }
-        } catch (error) {
-            console.error('Error fetching CrossRef data:', error);
-            return 'Error fetching data from CrossRef';
+        } catch (err) {
+            return 'Error fetching CrossRef data';
         }
     }
 
-    // Fetch journal presence information from Europe PMC (includes PubMed data)
     async function fetchPubMedInfo(title) {
-        if (!title || title === '—') {
-            return 'No title available for lookup';
-        }
-        
         try {
-            // Search Europe PMC for articles from this specific journal
-            const encodedTitle = encodeURIComponent(title);
-            const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodedTitle}[Journal]&format=json`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.hitCount && data.hitCount > 0) {
-                return `Approximately ${data.hitCount} articles from this journal indexed in Europe PMC (includes PubMed content)`;
-            } else {
-                return 'No articles from this journal found in Europe PMC/PubMed';
-            }
-        } catch (error) {
-            console.error('Error fetching Europe PMC data:', error);
-            return 'Error fetching data from Europe PMC/PubMed';
+            const res = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}[Journal]&format=json`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            return data.hitCount > 0 ? `Approximately ${data.hitCount} articles in Europe PMC.` : 'No articles found.';
+        } catch (err) {
+            return 'Error fetching PubMed data';
         }
     }
 
-    // Display journal data and credibility assessment
+    // --- Display Results ---
     function displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
-        // Determine credibility status
-        let statusBadge = '';
-        let statusText = '';
-        const f = offlineHit.flags || {};
+        const f = offlineHit.flags;
+        const foundList = Object.keys(f).filter(k => f[k]).join(', ') || 'Not found';
 
+        let statusBadge = 'status-danger';
+        let statusText = 'Not Recommended';
         if (removedHit) {
             statusBadge = 'status-danger';
             statusText = 'Not Recommended (Removed)';
@@ -388,277 +318,129 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (f.doaj || f.ibss || f.scielo || f.norwegian) {
             statusBadge = 'status-warning';
             statusText = 'Verify Manually';
-        } else {
-            statusBadge = 'status-danger';
-            statusText = 'Not Recommended';
         }
 
-        // Check for transformative agreements
-        let transformativeInfo = 'No transformative agreement found';
-        const transformativeMatch = transformativeList.find(t => {
-            const tTitle = t.journal || t.title || t['journal title'] || '';
-            return normalizeTitle(tTitle) === normalizeTitle(query);
-        });
-
-        if (transformativeMatch) {
-            transformativeInfo = `
-                <div class="transformative-info">
-                    <h4>Transformative Agreement Found</h4>
-                    <div class="transformative-details">
-                        <div class="transformative-detail">
-                            <strong>Journal:</strong> ${transformativeMatch.journal || transformativeMatch.title || 'N/A'}
-                        </div>
-                        <div class="transformative-detail">
-                            <strong>Publisher:</strong> ${transformativeMatch.publisher || 'N/A'}
-                        </div>
-                        <div class="transformative-detail">
-                            <strong>Duration:</strong> ${transformativeMatch.duration || 'N/A'}
-                        </div>
-                        <div class="transformative-detail">
-                            <strong>Agreement:</strong> <a href="${transformativeMatch.link}" target="_blank">View agreement details</a>
-                        </div>
-                    </div>
+        const tm = transformativeList.find(t => normalizeTitle(t.journal) === normalizeTitle(query));
+        const transformativeInfo = tm ? `
+            <div class="transformative-info">
+                <h4>Transformative Agreement Found</h4>
+                <div class="transformative-details">
+                    <div class="transformative-detail"><strong>Publisher:</strong> ${tm.publisher || 'N/A'}</div>
+                    <div class="transformative-detail"><strong>Duration:</strong> ${tm.duration || 'N/A'}</div>
+                    <div class="transformative-detail"><strong>Agreement:</strong> <a href="${tm.link}" target="_blank">View Agreement</a></div>
                 </div>
-            `;
-        }
+            </div>
+        ` : '<div>No transformative agreement found</div>';
 
-        // Build results HTML
         resultsContainer.innerHTML = `
             <table class="report-table">
-                <thead>
-                    <tr>
-                        <th colspan="2">Journal Information</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
+                <thead><tr><th colspan="2">Journal Information</th><th>Status</th></tr></thead>
                 <tbody>
-                    <tr>
-                        <td class="info-label">Journal Title</td>
-                        <td>${query}</td>
-                        <td rowspan="3"><span class="status-badge ${statusBadge}">${statusText}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Found In</td>
-                        <td>${offlineHit.foundIn || Object.keys(f).filter(k => f[k]).join(', ') || 'Not found in accredited lists'}</td>
-                    </tr>
+                    <tr><td class="info-label">Query</td><td>${escapeHtml(query)}</td><td rowspan="3"><span class="status-badge ${statusBadge}">${statusText}</span></td></tr>
+                    <tr><td class="info-label">Found In</td><td>${escapeHtml(foundList)}</td></tr>
                 </tbody>
             </table>
-
             <table class="report-table">
-                <thead>
-                    <tr>
-                        <th colspan="2">Accreditation Status</th>
-                    </tr>
-                </thead>
+                <thead><tr><th colspan="2">Accreditation Status</th></tr></thead>
                 <tbody>
-                    <tr>
-                        <td class="info-label">DHET</td>
-                        <td><i class="fas fa-${f.dhet ? 'check-circle' : 'times-circle'}" style="color: ${f.dhet ? 'var(--success)' : 'var(--danger)'};"></i> ${f.dhet ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">DHET 2</td>
-                        <td><i class="fas fa-${f.dhet2 ? 'check-circle' : 'times-circle'}" style="color: ${f.dhet2 ? 'var(--success)' : 'var(--danger)'};"></i> ${f.dhet2 ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Scopus</td>
-                        <td><i class="fas fa-${f.scopus ? 'check-circle' : 'times-circle'}" style="color: ${f.scopus ? 'var(--success)' : 'var(--danger)'};"></i> ${f.scopus ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Web of Science</td>
-                        <td><i class="fas fa-${f.wos ? 'check-circle' : 'times-circle'}" style="color: ${f.wos ? 'var(--success)' : 'var(--danger)'};"></i> ${f.wos ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">DOAJ</td>
-                        <td><i class="fas fa-${f.doaj ? 'check-circle' : 'times-circle'}" style="color: ${f.doaj ? 'var(--success)' : 'var(--danger)'};"></i> ${f.doaj ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">IBSS</td>
-                        <td><i class="fas fa-${f.ibss ? 'check-circle' : 'times-circle'}" style="color: ${f.ibss ? 'var(--success)' : 'var(--danger)'};"></i> ${f.ibss ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">SciELO</td>
-                        <td><i class="fas fa-${f.scielo ? 'check-circle' : 'times-circle'}" style="color: ${f.scielo ? 'var(--success)' : 'var(--danger)'};"></i> ${f.scielo ? 'Found' : 'Not found'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Norwegian List</td>
-                        <td><i class="fas fa-${f.norwegian ? 'check-circle' : 'times-circle'}" style="color: ${f.norwegian ? 'var(--success)' : 'var(--danger)'};"></i> ${f.norwegian ? 'Found' : 'Not found'}</td>
-                    </tr>
+                    <tr><td class="info-label">DHET</td><td>${f.dhet ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">DHET 2</td><td>${f.dhet2 ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">Scopus</td><td>${f.scopus ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">Web of Science</td><td>${f.wos ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">DOAJ</td><td>${f.doaj ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">IBSS</td><td>${f.ibss ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">SciELO</td><td>${f.scielo ? 'Found' : 'Not found'}</td></tr>
+                    <tr><td class="info-label">Norwegian</td><td>${f.norwegian ? 'Found' : 'Not found'}</td></tr>
                 </tbody>
             </table>
-
             ${transformativeInfo}
-
             <table class="report-table">
-                <thead>
-                    <tr>
-                        <th colspan="2">Live Lookup Results</th>
-                    </tr>
-                </thead>
+                <thead><tr><th colspan="2">Live Lookup Results</th></tr></thead>
                 <tbody>
-                    <tr>
-                        <td class="info-label">CrossRef Information</td>
-                        <td><div class="live-info">${crossrefInfo}</div></td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">PubMed Information</td>
-                        <td><div class="live-info">${pubmedInfo}</div></td>
-                    </tr>
+                    <tr><td class="info-label">CrossRef</td><td><div class="live-info">${crossrefInfo}</div></td></tr>
+                    <tr><td class="info-label">Europe PMC / PubMed</td><td><div class="live-info">${pubmedInfo}</div></td></tr>
                 </tbody>
             </table>
         `;
     }
 
-    // Display removed journals list
     function displayRemovedJournals() {
-        const removedList = journalLists.removed || [];
-        
-        if (removedList.length === 0) {
-            resultsContainer.innerHTML = '<p>No removed journals data available or failed to load. Please try again.</p>';
+        const removed = journalLists.removed || [];
+        if (removed.length === 0) {
+            resultsContainer.innerHTML = '<p>No removed journals data available.</p>';
             return;
         }
 
-        // Get all possible column names from the first item
-        const firstItem = removedList[0];
-        const columns = Object.keys(firstItem);
-
-        // Filter out empty columns
-        const nonEmptyColumns = columns.filter(col => {
-            return removedList.some(item => item[col] && item[col].trim() !== '');
-        });
-
+        const cols = Object.keys(removed[0]).filter(col => removed.some(r => r[col]));
         resultsContainer.innerHTML = `
-            <h3>Journals Removed from Accredited List</h3>
-            <p>Showing ${removedList.length} journals removed from the accredited list in past years.</p>
-            <div class="table-container">
+            <h3>Removed from Accredited List</h3>
+            <div class="table-container" style="max-height: 500px; overflow-y: auto;">
                 <table class="report-table">
-                    <thead>
-                        <tr>
-                            ${nonEmptyColumns.map(col => `<th>${col.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${removedList.map(journal => `
-                            <tr>
-                                ${nonEmptyColumns.map(col => `<td>${journal[col] || 'N/A'}</td>`).join('')}
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <thead><tr>${cols.map(c => `<th>${c.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}</tr></thead>
+                    <tbody>${removed.map(r => `<tr>${cols.map(c => `<td>${escapeHtml(r[c] || 'N/A')}</td>`).join('')}</tr>`).join('')}</tbody>
                 </table>
             </div>
         `;
+        showRemovedBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Removed from Accredited List';
+        isRemovedVisible = true;
     }
 
-    // Copy removed journals list as CSV
-    copyRemovedBtn.addEventListener('click', function() {
-        const removedList = journalLists.removed || [];
-        
-        if (removedList.length === 0) {
-            alert('No removed journals data available to copy.');
-            return;
-        }
-
-        // Get all possible column names from the first item
-        const firstItem = removedList[0];
-        const columns = Object.keys(firstItem);
-
-        // Filter out empty columns
-        const nonEmptyColumns = columns.filter(col => {
-            return removedList.some(item => item[col] && item[col].trim() !== '');
-        });
-
-        // Create CSV content
-        let csvContent = nonEmptyColumns.join(',') + '\n';
-        
-        removedList.forEach(journal => {
-            const row = nonEmptyColumns.map(col => {
-                const value = journal[col] || '';
-                // Handle values that might contain commas
-                return `"${value.replace(/"/g, '""')}"`;
-            }).join(',');
-            
-            csvContent += row + '\n';
-        });
-
-        // Create a Blob and download link
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'removed_journals.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Show confirmation
-        const originalText = copyRemovedBtn.innerHTML;
-        copyRemovedBtn.innerHTML = '<i class="fas fa-check"></i> Downloaded CSV!';
-        setTimeout(() => {
-            copyRemovedBtn.innerHTML = originalText;
-        }, 2000);
-    });
-
-    // Event handlers
-    searchBtn.addEventListener('click', async function() {
+    // --- Event Handlers ---
+    searchBtn.addEventListener('click', async function () {
         const query = journalQuery.value.trim();
-        
-        if (query === '') {
-            alert('Please enter a journal title or ISSN');
-            return;
-        }
+        if (!query) return alert('Please enter a journal title or ISSN');
 
-        showLoading('Searching for journal...');
-        
+        showLoading('Searching...');
         try {
             const offlineHit = findOffline(query);
             const removedHit = checkRemovedList(query);
-
-            // For live lookups, we need to extract ISSN or use title
-            // Try to extract ISSN from query if possible
-            let issnForCrossRef = '';
-            if (isISSN(query)) {
-                issnForCrossRef = query;
-            } else {
-                // If query is not an ISSN, we might need to find it from our data
-                // This is a simplified approach - you might want to enhance this
-                for (const [key, arr] of Object.entries(journalLists)) {
-                    if (key === 'removed') continue;
-                    for (const j of arr) {
-                        const title = j.title || j['journal title'] || j['journal'] || j.name || j['journal name'] || '';
-                        if (normalizeTitle(title) === normalizeTitle(query)) {
-                            issnForCrossRef = j.issn || j['issn'] || j.eissn || j['e-issn'] || j['eissn'] || '';
-                            break;
-                        }
-                    }
-                    if (issnForCrossRef) break;
-                }
-            }
-
-            // Fetch live data
             const [crossrefInfo, pubmedInfo] = await Promise.all([
-                fetchCrossRefInfo(issnForCrossRef),
+                fetchCrossRefInfo(query),
                 fetchPubMedInfo(query)
             ]);
-
-            hideLoading();
             displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo);
-        } catch (error) {
-            console.error('Error during search:', error);
-            showError('An error occurred during the search. Please try again.');
+        } catch (err) {
+            showError('Search failed. Please try again.');
         }
     });
 
-    showRemovedBtn.addEventListener('click', function() {
-        displayRemovedJournals();
-    });
-
-    // Allow pressing Enter to search
-    journalQuery.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchBtn.click();
+    showRemovedBtn.addEventListener('click', function () {
+        if (isRemovedVisible) {
+            loadAllLists();
+            showRemovedBtn.innerHTML = '<i class="fas fa-eye"></i> Show Removed from Accredited List';
+            isRemovedVisible = false;
+        } else {
+            displayRemovedJournals();
         }
     });
 
-    // Initialize the application
+    copyRemovedBtn.addEventListener('click', function () {
+        const removed = journalLists.removed || [];
+        if (!removed.length) return alert('No removed journals to copy.');
+
+        let csv = Object.keys(removed[0]).join(',') + '\n';
+        removed.forEach(r => {
+            const row = Object.values(r).map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',');
+            csv += row + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'removed_journals.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        const orig = copyRemovedBtn.innerHTML;
+        copyRemovedBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => copyRemovedBtn.innerHTML = orig, 2000);
+    });
+
+    journalQuery.addEventListener('keydown', e => {
+        if (e.key === 'Enter') searchBtn.click();
+    });
+
+    // --- Initialize ---
     loadAllLists();
 });
