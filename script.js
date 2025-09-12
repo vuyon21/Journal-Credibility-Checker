@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <table class="report-table">
         <thead>
           <tr>
-            <th colspan="2">Accreditation Status</th>
+            <th colspan="2">DHET-Accredited Indexing Sources</th>
           </tr>
         </thead>
         <tbody>
