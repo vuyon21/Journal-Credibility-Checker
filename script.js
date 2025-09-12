@@ -59,36 +59,34 @@ document.addEventListener('DOMContentLoaded', function() {
   let transformativeList = [];
   let isRemovedVisible = false;
   let currentReportData = null; // Store current report data for copying
-
+  
   // Utility function to escape HTML
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
-
+  
   // Display loading state with message
   function showLoading(msg) {
-    resultsContainer.innerHTML = `
-      <div class="loading">
+    resultsContainer.innerHTML = 
+      `<div class="loading">
         <div class="spinner"></div>
         <p>${msg}</p>
         <p id="progressText">Loading...</p>
-      </div>
-    `;
+      </div>`;
   }
-
+  
   // Display error message with retry option
   function showError(msg) {
-    resultsContainer.innerHTML = `
-      <div class="loading">
+    resultsContainer.innerHTML = 
+      `<div class="loading">
         <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger);"></i>
         <p>${msg}</p>
         <button id="tryAgainBtn" style="margin-top: 15px;">
           <i class="fas fa-redo"></i> Try Again
         </button>
-      </div>
-    `;
+      </div>`;
     
     document.getElementById('tryAgainBtn').addEventListener('click', function() {
       journalQuery.value = '';
@@ -96,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
       loadAllLists();
     });
   }
-
+  
   // Normalize text for comparison
   function normalizeTitle(t) {
     return (t || '').toLowerCase()
@@ -105,18 +103,31 @@ document.addEventListener('DOMContentLoaded', function() {
       .replace(/\s+/g, ' ')
       .trim();
   }
-
-  // Normalize ISSN format
+  
+  // Format ISSN with hyphen after 4th digit
+  function formatISSN(issn) {
+    if (!issn || issn === '—') return '—';
+    // Remove all non-numeric characters except X
+    const cleanIssn = issn.replace(/[^0-9X]/g, '');
+    // If we have exactly 8 digits, insert hyphen after 4th digit
+    if (cleanIssn.length === 8) {
+      return `${cleanIssn.slice(0, 4)}-${cleanIssn.slice(4)}`;
+    }
+    // Return original if not valid 8-digit format
+    return issn;
+  }
+  
+  // Normalize ISSN format (remove hyphens and other non-alphanumeric chars)
   function normalizeISSN(s) {
     if (!s) return '';
     return s.toString().toUpperCase().replace(/[^0-9X]/g, '');
   }
-
+  
   // Check if string is a valid ISSN format
   function isISSN(s) {
     return /\b\d{4}-?\d{3}[\dXx]\b/i.test(s);
   }
-
+  
   // Fetch with fallback (direct first, then CORS proxy)
   async function fetchWithFallback(url) {
     try {
@@ -130,18 +141,18 @@ document.addEventListener('DOMContentLoaded', function() {
       return res;
     }
   }
-
+  
   // Generate URL for CSV file
   function rawUrlFor(fname) {
     return RAW_BASE + encodeURIComponent(fname);
   }
-
+  
   // Robust CSV parser
   function parseCSV(text) {
     if (!text) return [];
     text = text.replace(/^\uFEFF/, ''); // Remove BOM
-    
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const lines = text.split(/\r?
+/).filter(l => l.trim());
     if (lines.length === 0) return [];
     
     const headerLine = lines[0];
@@ -156,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const line = lines[i].replace(/,$/, ',');
       const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
       const obj = {};
+      
       headers.forEach((h, j) => obj[h] = parts[j] || '');
       
       // Only add row if it has content
@@ -165,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return rows;
   }
-
+  
   // Get journal title from entry using various possible field names
   function getJournalTitle(entry) {
     const possibleTitleFields = [
@@ -181,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return '';
   }
-
+  
   // Get ISSN from entry using various possible field names
   function getJournalISSN(entry) {
     const possibleISSNFields = [
@@ -197,13 +209,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return '';
   }
-
+  
   // Get publisher from entry using various possible field names
   function getJournalPublisher(entry) {
     const possiblePublisherFields = [
       'publisher', 'publisher name', 'publisher_name', 'publisher-name',
       'publisher information', 'publisher_info', 'publisher-info',
-      'published by', 'publishing company', 'publishing_company'
+      'published by', 'publishing company', 'publishing_company',
+      'publisher information', 'publisher_information'
     ];
     
     for (const field of possiblePublisherFields) {
@@ -214,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return '—';
   }
-
+  
   // Load all CSV files from GitHub
   async function loadAllLists() {
     showLoading('Loading journal lists...');
@@ -254,12 +267,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = parseCSV(text);
         
         rows.forEach(r => {
+          // Extract publisher from multiple possible fields
+          const publisher = r.publisher || r['publisher name'] || r['publisher_name'] || r['publisher-name'] || r['published by'] || 'Unknown';
+          
+          // Extract open access status from multiple possible fields
+          const openAccessStatus = r['open access status'] || r['Open Access Status'] || r['open_access_status'] || r['oa_status'] || 'Not specified';
+          
           transformativeList.push({
             ...r,
             agreementLink: t.link,
-            publisher: r.publisher || r['publisher name'] || 'Unknown',
+            publisher: publisher,
             duration: r['agreement duration'] || r.duration || 'N/A',
-            journalTitle: r['journal title'] || r.title || r.journal || ''
+            journalTitle: r['journal title'] || r.title || r.journal || '',
+            openAccessStatus: openAccessStatus
           });
         });
         
@@ -278,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
       resultsContainer.innerHTML = '<p>Enter a journal name or ISSN to check its credibility.</p>';
     }
   }
-
+  
   // Search for journal across all loaded CSV files
   function findOffline(query) {
     const qNorm = normalizeTitle(query);
@@ -349,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
       foundPublisher: foundPublisher || '—'
     };
   }
-
+  
   // Check if journal is in removed list
   function checkRemovedList(query) {
     const qNorm = normalizeTitle(query);
@@ -364,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return null;
   }
-
+  
   // Fetch journal information from CrossRef API
   async function fetchCrossRefInfo(query) {
     if (!query || query === '—') {
@@ -376,8 +396,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (isISSN(query)) {
         const issn = normalizeISSN(query);
         const formatted = issn.length === 8 ? `${issn.slice(0,4)}-${issn.slice(4)}` : query;
-        const response = await fetch(`https://api.crossref.org/journals/${formatted}`);
         
+        const response = await fetch(`https://api.crossref.org/journals/${formatted}`);
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
@@ -388,14 +408,17 @@ document.addEventListener('DOMContentLoaded', function() {
           let result = '';
           
           if (journal.title) {
-            result += `<strong>Title:</strong> ${journal.title}<br>`;
+            result += `<strong>Title:</strong> ${escapeHtml(journal.title)}<br>`;
           }
+          
           if (journal.publisher) {
-            result += `<strong>Publisher:</strong> ${journal.publisher}<br>`;
+            result += `<strong>Publisher:</strong> ${escapeHtml(journal.publisher)}<br>`;
           }
+          
           if (journal['issn-type'] && journal['issn-type'].length > 0) {
             result += `<strong>ISSN:</strong> ${journal['issn-type'].map(issn => issn.value).join(', ')}<br>`;
           }
+          
           if (journal.license && journal.license.length > 0) {
             result += `<strong>License:</strong> <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
           }
@@ -406,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // If ISSN search failed or we have a title, try title search
       const response = await fetch(`https://api.crossref.org/journals?query=${encodeURIComponent(query)}&rows=5`);
-      
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
       }
@@ -417,14 +439,17 @@ document.addEventListener('DOMContentLoaded', function() {
         let result = '';
         
         if (journal.title) {
-          result += `<strong>Title:</strong> ${journal.title}<br>`;
+          result += `<strong>Title:</strong> ${escapeHtml(journal.title)}<br>`;
         }
+        
         if (journal.publisher) {
-          result += `<strong>Publisher:</strong> ${journal.publisher}<br>`;
+          result += `<strong>Publisher:</strong> ${escapeHtml(journal.publisher)}<br>`;
         }
+        
         if (journal['issn-type'] && journal['issn-type'].length > 0) {
           result += `<strong>ISSN:</strong> ${journal['issn-type'].map(issn => issn.value).join(', ')}<br>`;
         }
+        
         if (journal.license && journal.license.length > 0) {
           result += `<strong>License:</strong> <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
         }
@@ -438,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return 'Error fetching data from CrossRef';
     }
   }
-
+  
   // Fetch journal presence information from Europe PMC (includes PubMed data)
   async function fetchPubMedInfo(title) {
     if (!title || title === '—') {
@@ -447,7 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
       const response = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(title)}[Journal]&format=json`);
-      
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
       }
@@ -463,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return 'Error fetching data from Europe PMC/PubMed';
     }
   }
-
+  
   // Copy current report to clipboard
   function copyReportToClipboard() {
     if (!currentReportData) {
@@ -474,14 +498,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const { query, offlineHit, removedHit, crossrefInfo, pubmedInfo, transformativeMatch } = currentReportData;
     
     // Create a text version of the report
-    let reportText = `JOURNAL CREDIBILITY REPORT\n`;
-    reportText += `================================\n\n`;
-    reportText += `Journal Title: ${query}\n`;
-    reportText += `ISSN: ${offlineHit.foundISSN}\n`;
-    reportText += `Found In: ${offlineHit.foundIn}\n\n`;
-    
-    reportText += `ACCREDITATION STATUS\n`;
-    reportText += `====================\n`;
+    let reportText = `JOURNAL CREDIBILITY REPORT
+`;
+    reportText += `================================
+`;
+    reportText += `Journal Title: ${query}
+`;
+    reportText += `ISSN: ${formatISSN(offlineHit.foundISSN)}
+`;
+    reportText += `Found In: ${offlineHit.foundIn}
+`;
+    reportText += `ACCREDITATION STATUS
+`;
+    reportText += `====================
+`;
     
     // Only show relevant accreditation statuses
     const f = offlineHit.flags || {};
@@ -490,28 +520,44 @@ document.addEventListener('DOMContentLoaded', function() {
       .map(([key]) => key.toUpperCase());
     
     if (relevantLists.length > 0) {
-      reportText += `Found in: ${relevantLists.join(', ')}\n`;
+      reportText += `Found in: ${relevantLists.join(', ')}
+`;
     } else {
-      reportText += `Not found in any accredited lists\n`;
+      reportText += `Not found in any accredited lists
+`;
     }
     
     if (removedHit) {
-      reportText += `WARNING: This journal was removed from the accredited list\n\n`;
+      reportText += `WARNING: This journal was removed from the accredited list
+`;
     }
     
     if (transformativeMatch) {
-      reportText += `TRANSFORMATIVE AGREEMENT\n`;
-      reportText += `========================\n`;
-      reportText += `Journal: ${transformativeMatch.journalTitle || transformativeMatch.title || 'N/A'}\n`;
-      reportText += `Publisher: ${transformativeMatch.publisher || 'N/A'}\n`;
-      reportText += `Duration: ${transformativeMatch.duration || 'N/A'}\n`;
-      reportText += `Agreement Link: ${transformativeMatch.agreementLink}\n\n`;
+      reportText += `TRANSFORMATIVE AGREEMENT
+`;
+      reportText += `========================
+`;
+      reportText += `Journal: ${transformativeMatch.journalTitle || transformativeMatch.title || 'N/A'}
+`;
+      reportText += `Publisher: ${transformativeMatch.publisher || 'N/A'}
+`;
+      reportText += `Duration: ${transformativeMatch.duration || 'N/A'}
+`;
+      reportText += `Open Access Status: ${transformativeMatch.openAccessStatus || 'Not specified'}
+`;
+      reportText += `Agreement Link: ${transformativeMatch.agreementLink}
+`;
     }
     
-    reportText += `LIVE LOOKUP RESULTS\n`;
-    reportText += `===================\n`;
-    reportText += `CrossRef: ${crossrefInfo.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')}\n`;
-    reportText += `PubMed: ${pubmedInfo}\n`;
+    reportText += `LIVE LOOKUP RESULTS
+`;
+    reportText += `==================
+`;
+    reportText += `CrossRef: ${crossrefInfo.replace(/<br>/g, '
+').replace(/<[^>]*>/g, '')}
+`;
+    reportText += `PubMed: ${pubmedInfo}
+`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(reportText).then(() => {
@@ -529,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
       alert('Failed to copy report to clipboard');
     });
   }
-
+  
   // Display journal data and credibility assessment
   function displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
     // Determine credibility status
@@ -564,8 +610,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (transformativeMatch) {
-      transformativeInfo = `
-        <tr>
+      transformativeInfo = 
+        `<tr>
           <td class="info-label">Journal</td>
           <td>${escapeHtml(transformativeMatch.journalTitle || transformativeMatch.title || 'N/A')}</td>
         </tr>
@@ -578,10 +624,13 @@ document.addEventListener('DOMContentLoaded', function() {
           <td>${escapeHtml(transformativeMatch.duration || 'N/A')}</td>
         </tr>
         <tr>
+          <td class="info-label">Open Access Status</td>
+          <td>${escapeHtml(transformativeMatch.openAccessStatus || 'Not specified')}</td>
+        </tr>
+        <tr>
           <td class="info-label">Agreement</td>
           <td><a href="${transformativeMatch.agreementLink}" target="_blank">View agreement details</a></td>
-        </tr>
-      `;
+        </tr>`;
     }
     
     // Store current report data for copying
@@ -595,16 +644,14 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Build results HTML
-    resultsContainer.innerHTML = `
-      <div class="card-header">
+    resultsContainer.innerHTML = 
+      `<div class="card-header">
         <h3>Credibility Results</h3>
         <button id="copyReportTop" class="copy-report-top">
           <i class="fas fa-copy"></i> Copy Report
         </button>
       </div>
-      
       <div class="status-large ${statusClass}">${statusText}</div>
-      
       <table class="report-table">
         <thead>
           <tr>
@@ -618,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </tr>
           <tr>
             <td class="info-label">ISSN</td>
-            <td>${escapeHtml(offlineHit.foundISSN)}</td>
+            <td>${escapeHtml(formatISSN(offlineHit.foundISSN))}</td>
           </tr>
           <tr>
             <td class="info-label">Publisher</td>
@@ -630,7 +677,6 @@ document.addEventListener('DOMContentLoaded', function() {
           </tr>
         </tbody>
       </table>
-      
       <table class="report-table">
         <thead>
           <tr>
@@ -647,17 +693,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 .join(' ') || 'Not found in any accredited lists'}
             </td>
           </tr>
-          ${removedHit ? `
-          <tr>
+          ${removedHit ? 
+          `<tr>
             <td class="info-label">Removed Status</td>
             <td class="text-danger">
               <i class="fas fa-exclamation-triangle"></i> This journal was removed from the accredited list
             </td>
-          </tr>
-          ` : ''}
+          </tr>`
+           : ''}
         </tbody>
       </table>
-      
       <table class="report-table">
         <thead>
           <tr>
@@ -668,7 +713,6 @@ document.addEventListener('DOMContentLoaded', function() {
           ${transformativeInfo}
         </tbody>
       </table>
-      
       <table class="report-table">
         <thead>
           <tr>
@@ -685,16 +729,16 @@ document.addEventListener('DOMContentLoaded', function() {
             <td><div class="live-info">${pubmedInfo}</div></td>
           </tr>
         </tbody>
-      </table>
-    `;
+      </table>`;
     
     // Add event listener for the copy report button
     document.getElementById('copyReportTop').addEventListener('click', copyReportToClipboard);
   }
-
+  
   // Display removed journals list
   function displayRemovedJournals() {
     const removedList = journalLists.removed || [];
+    
     if (removedList.length === 0) {
       resultsContainer.innerHTML = '<p>No removed journals data available or failed to load. Please try again.</p>';
       return;
@@ -705,8 +749,8 @@ document.addEventListener('DOMContentLoaded', function() {
       removedList.some(item => item[col] && item[col].toString().trim() !== '')
     );
     
-    resultsContainer.innerHTML = `
-      <h3>Journals Removed from Accredited List</h3>
+    resultsContainer.innerHTML = 
+      `<h3>Journals Removed from Accredited List</h3>
       <p>Showing ${removedList.length} journals removed from the accredited list in past years.</p>
       <div class="table-container" style="max-height: 500px; overflow-y: auto;">
         <table class="report-table">
@@ -716,23 +760,23 @@ document.addEventListener('DOMContentLoaded', function() {
             </tr>
           </thead>
           <tbody>
-            ${removedList.map(journal => `
-              <tr>
+            ${removedList.map(journal => 
+              `<tr>
                 ${columns.map(col => `<td>${escapeHtml(journal[col] || 'N/A')}</td>`).join('')}
-              </tr>
-            `).join('')}
+              </tr>`
+            ).join('')}
           </tbody>
         </table>
-      </div>
-    `;
+      </div>`;
     
     showRemovedBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Removed from Accredited List';
     isRemovedVisible = true;
   }
-
+  
   // Copy removed journals list as CSV
   copyRemovedBtn.addEventListener('click', function() {
     const removedList = journalLists.removed || [];
+    
     if (removedList.length === 0) {
       alert('No removed journals data available to copy.');
       return;
@@ -744,13 +788,16 @@ document.addEventListener('DOMContentLoaded', function() {
     );
     
     // Create CSV content
-    let csvContent = columns.join(',') + '\n';
+    let csvContent = columns.join(',') + '
+';
+    
     removedList.forEach(journal => {
       const row = columns.map(col => {
         const value = journal[col] || '';
         return `"${value.toString().replace(/"/g, '""')}"`;
       }).join(',');
-      csvContent += row + '\n';
+      csvContent += row + '
+';
     });
     
     // Create a Blob and download link
@@ -771,10 +818,11 @@ document.addEventListener('DOMContentLoaded', function() {
       copyRemovedBtn.innerHTML = originalText;
     }, 2000);
   });
-
+  
   // Event handlers
   searchBtn.addEventListener('click', async function() {
     const query = journalQuery.value.trim();
+    
     if (query === '') {
       alert('Please enter a journal title or ISSN');
       return;
@@ -798,7 +846,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showError('An error occurred during the search. Please try again.');
     }
   });
-
+  
   showRemovedBtn.addEventListener('click', function() {
     if (isRemovedVisible) {
       resultsContainer.innerHTML = '<p>Enter a journal name or ISSN to check its credibility.</p>';
@@ -808,14 +856,14 @@ document.addEventListener('DOMContentLoaded', function() {
       displayRemovedJournals();
     }
   });
-
+  
   // Allow pressing Enter to search
   journalQuery.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       searchBtn.click();
     }
   });
-
+  
   // Initialize the application
   loadAllLists();
 });
