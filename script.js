@@ -97,23 +97,31 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Normalize text for comparison
+  // Normalize text for comparison — handles Unicode whitespace, BOM, punctuation
   function normalizeTitle(t) {
-    return (t || '').toLowerCase()
-      .replace(/\uFEFF/g, '')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    if (!t) return '';
+    
+    // Remove BOM
+    t = t.replace(/^\uFEFF/, '');
+    
+    // Replace ALL Unicode whitespace with single space
+    t = t.replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ');
+    
+    // Remove all non-alphanumeric and non-space characters
+    t = t.replace(/[^a-z0-9\s]/gi, ' ');
+    
+    // Collapse multiple spaces into one
+    t = t.replace(/\s+/g, ' ').trim().toLowerCase();
+    
+    return t;
   }
   
   // Format ISSN to preserve original hyphenated format for display
   function formatISSN(issn) {
     if (!issn || issn === '—') return '—';
-    // Keep original format as-is from CSV — we don't normalize for display
-    // But ensure it's valid: 4 digits, hyphen, 3 digits + X
     const clean = issn.replace(/[^0-9X]/g, '');
     if (clean.length === 8) {
-      return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+        return `${clean.slice(0, 4)}-${clean.slice(4)}`;
     }
     return issn; // Return unchanged if malformed
   }
@@ -186,8 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
     
     for (const field of possibleTitleFields) {
-      if (entry[field] && entry[field].trim() !== '') {
-        return entry[field].trim();
+      if (entry[field] && entry[field].toString().trim() !== '') {
+        return entry[field].toString().trim();
       }
     }
     
@@ -202,29 +210,29 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
     
     for (const field of possibleISSNFields) {
-      if (entry[field] && entry[field].trim() !== '') {
-        return entry[field].trim();
+      if (entry[field] && entry[field].toString().trim() !== '') {
+        return entry[field].toString().trim();
       }
     }
     
     return '';
   }
   
-  // Get publisher from entry using various possible field names
+  // Get publisher from entry using various possible field names (case-insensitive)
   function getJournalPublisher(entry) {
-    const possiblePublisherFields = [
-      'publisher', 'publisher name', 'publisher_name', 'publisher-name',
-      'publisher information', 'publisher_info', 'publisher-info',
-      'published by', 'publishing company', 'publishing_company',
-      'publisher information', 'publisher_information'
+    const possibleFields = [
+        'publisher', 'publisher name', 'publisher_name', 'publisher-name',
+        'publisher information', 'publisher_info', 'publisher-info',
+        'published by', 'publishing company', 'publishing_company',
+        'Publisher', 'Publisher Name', 'Publisher_Name', 'Publisher-Name'
     ];
-    
-    for (const field of possiblePublisherFields) {
-      if (entry[field] && entry[field].trim() !== '') {
-        return entry[field].trim();
-      }
+
+    for (const field of possibleFields) {
+        if (entry[field] && entry[field].toString().trim() !== '') {
+            return entry[field].toString().trim();
+        }
     }
-    
+
     return '—';
   }
   
@@ -267,20 +275,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = parseCSV(text);
         
         rows.forEach(r => {
-          // Extract publisher from multiple possible fields
-          const publisher = r.publisher || r['publisher name'] || r['publisher_name'] || r['publisher-name'] || r['published by'] || 'Unknown';
-          
-          // Extract Open Access Status from multiple possible fields
-          const openAccessStatus = r['open access status'] || r['Open Access Status'] || r['open_access_status'] || r['oa_status'] || 'Not specified';
-          
-          transformativeList.push({
-            ...r,
-            agreementLink: t.link,
-            publisher: publisher,
-            duration: r['agreement duration'] || r.duration || 'N/A',
-            journalTitle: r['journal title'] || r.title || r.journal || '',
-            openAccessStatus: openAccessStatus
-          });
+            const publisher = getJournalPublisher(r);
+            const openAccessStatus = 
+                r['open access status'] || 
+                r['Open Access Status'] || 
+                r['open_access_status'] || 
+                r['oa_status'] || 
+                'Not specified';
+
+            transformativeList.push({
+                ...r,
+                agreementLink: t.link,
+                publisher: publisher,
+                duration: r['agreement duration'] || r.duration || 'N/A',
+                journalTitle: r['journal title'] || r.title || r.journal || '',
+                openAccessStatus: openAccessStatus
+            });
         });
         
         loadedSuccessfully = true;
@@ -479,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'No articles from this journal found in Europe PMC/PubMed';
       }
     } catch (error) {
-      console.error('Error fetching Europe PMC data:', error);
+      console.error('Error fetching Europe PMC ', error);
       return 'Error fetching data from Europe PMC/PubMed';
     }
   }
@@ -625,7 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </tr>
         <tr>
           <td class="info-label">Open Access Status</td>
-          <td>${escapeHtml(transformativeMatch.openAccessStatus || 'Not specified')}</td>
+          <td>${escapeHtml(transformativeMatch.openAccessStatus)}</td>
         </tr>
         <tr>
           <td class="info-label">Agreement</td>
