@@ -188,19 +188,51 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-.report-header {
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid var(--secondary);
+}
+
+.copy-report-top {
+    background: var(--gray);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+}
+
+.copy-report-top i {
+    margin-right: 8px;
+}
+
+.copy-report-top:hover {
+    background: #76797A;
+    transform: translateY(-2px);
+}
+
+.status-large {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.3rem;
+    text-align: center;
+    margin: 15px 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
 }
 
 .report-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 1rem 0;
+    margin: 1.5rem 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -213,6 +245,7 @@ body {
 .report-table th {
     background-color: var(--primary);
     color: white;
+    font-size: 1.1rem;
 }
 
 .report-table tr:nth-child(even) {
@@ -266,13 +299,14 @@ body {
 
 .accreditation-tag {
     display: inline-block;
-    padding: 5px 12px;
+    padding: 8px 15px;
     background: #e8f5e9;
     color: var(--success);
-    border-radius: 50px;
+    border-radius: 8px;
     margin: 5px;
     font-weight: 600;
     font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .copy-report-btn {
@@ -371,7 +405,7 @@ body {
     .action-buttons {
         flex-direction: column;
     }
-    .report-header {
+    .card-header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
@@ -380,7 +414,14 @@ body {
         display: block;
         overflow-x: auto;
     }
+    .info-label {
+        width: 30%;
+    }
     .transformative-details {
         grid-template-columns: 1fr;
+    }
+    .status-large {
+        font-size: 1.1rem;
+        padding: 10px 15px;
     }
 }
