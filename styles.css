@@ -260,6 +260,7 @@ body {
     font-weight: 600;
     width: 20%;
     background-color: #f1f1f1;
+    vertical-align: top;
 }
 
 .status-badge {
@@ -374,52 +375,77 @@ body {
     margin-top: 2rem;
 }
 
+/* Make all results bold for visibility */
+.report-table td {
+    font-weight: 600;
+}
+
+/* Make "Found In" value bold and block-level */
+.report-table td:nth-child(2) {
+    font-weight: 600;
+    display: block;
+    padding: 12px 15px;
+    text-align: left;
+}
+
 @media (max-width: 768px) {
     .header {
         flex-direction: column;
         text-align: center;
         padding: 1rem;
     }
+    
     .logo {
         margin-right: 0;
         margin-bottom: 15px;
     }
+    
     .title {
         margin-right: 0;
     }
+    
     .title h1 {
         font-size: 1.8rem;
     }
+    
     .search-box {
         flex-direction: column;
     }
+    
     .search-box input {
         border-radius: 5px;
         margin-bottom: 10px;
     }
+    
     .search-box button {
         border-radius: 5px;
         justify-content: center;
         padding: 15px;
     }
+    
     .action-buttons {
         flex-direction: column;
     }
+    
     .card-header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
     }
+    
     .report-table {
         display: block;
         overflow-x: auto;
     }
+    
     .info-label {
         width: 30%;
     }
+    
     .transformative-details {
         grid-template-columns: 1fr;
     }
+    
     .status-large {
         font-size: 1.1rem;
         padding: 10px 15px;
