@@ -263,6 +263,19 @@ body {
     vertical-align: top;
 }
 
+/* Make ALL result values bold */
+.report-table td {
+    font-weight: 600;
+}
+
+/* Make "Found In" value bold AND block-level */
+.report-table td:nth-child(2) {
+    font-weight: 600;
+    display: block;
+    padding: 12px 15px;
+    text-align: left;
+}
+
 .status-badge {
     display: inline-block;
     padding: 5px 10px;
@@ -283,6 +296,11 @@ body {
 
 .status-danger {
     background-color: var(--danger);
+    color: white;
+}
+
+.status-questionable {
+    background-color: #ff9800;
     color: white;
 }
 
@@ -373,19 +391,6 @@ body {
     background: var(--primary);
     color: white;
     margin-top: 2rem;
-}
-
-/* Make all results bold for visibility */
-.report-table td {
-    font-weight: 600;
-}
-
-/* Make "Found In" value bold and block-level */
-.report-table td:nth-child(2) {
-    font-weight: 600;
-    display: block;
-    padding: 12px 15px;
-    text-align: left;
 }
 
 @media (max-width: 768px) {
