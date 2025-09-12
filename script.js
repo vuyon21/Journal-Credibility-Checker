@@ -198,6 +198,21 @@ document.addEventListener('DOMContentLoaded', function() {
     return '';
   }
 
+  // Get publisher from entry using various possible field names
+  function getJournalPublisher(entry) {
+    const possiblePublisherFields = [
+      'publisher', 'publisher name', 'publisher_name', 'publisher-name'
+    ];
+    
+    for (const field of possiblePublisherFields) {
+      if (entry[field] && entry[field].trim() !== '') {
+        return entry[field].trim();
+      }
+    }
+    
+    return '';
+  }
+
   // Load all CSV files from GitHub
   async function loadAllLists() {
     showLoading('Loading journal lists...');
@@ -270,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let foundInList = [];
     let foundISSN = null;
     let foundTitle = null;
+    let foundPublisher = null;
     
     console.log(`Searching for: "${query}", Normalized: "${qNorm}", ISSN: ${issnQuery}`);
     
@@ -283,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const title = getJournalTitle(entry);
         const titleNorm = normalizeTitle(title);
         const issn = normalizeISSN(getJournalISSN(entry));
+        const publisher = getJournalPublisher(entry);
         
         // Check for match by ISSN
         if (issnQuery && issn && issn === issnQuery) {
@@ -290,6 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundInList.push(key);
           foundISSN = issn;
           foundTitle = title;
+          foundPublisher = publisher;
           console.log(`Found by ISSN in ${key}:`, title);
           break;
         }
@@ -300,6 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundInList.push(key);
           foundISSN = issn;
           foundTitle = title;
+          foundPublisher = publisher;
           console.log(`Found by title in ${key}:`, title);
           break;
         }
@@ -310,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundInList.push(key);
           foundISSN = issn;
           foundTitle = title;
+          foundPublisher = publisher;
           console.log(`Found by partial title match in ${key}:`, title);
           break;
         }
@@ -317,13 +337,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     const foundIn = foundInList.join(', ') || 'Not found in accredited lists';
-    console.log('Search results:', { flags, foundIn, foundISSN, foundTitle });
+    console.log('Search results:', { flags, foundIn, foundISSN, foundTitle, foundPublisher });
     
     return { 
       flags, 
       foundIn, 
       foundISSN: foundISSN || (isISSN(query) ? normalizeISSN(query) : '—'),
-      foundTitle: foundTitle || query
+      foundTitle: foundTitle || query,
+      foundPublisher: foundPublisher || '—'
     };
   }
 
@@ -349,6 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
+      // Try to find by ISSN first
       if (isISSN(query)) {
         const issn = normalizeISSN(query);
         const formatted = issn.length === 8 ? `${issn.slice(0,4)}-${issn.slice(4)}` : query;
@@ -364,35 +386,50 @@ document.addEventListener('DOMContentLoaded', function() {
           let result = '';
           
           if (journal.title) {
-            result += `Title: ${journal.title}<br>`;
+            result += `<strong>Title:</strong> ${journal.title}<br>`;
           }
           if (journal.publisher) {
-            result += `Publisher: ${journal.publisher}<br>`;
+            result += `<strong>Publisher:</strong> ${journal.publisher}<br>`;
+          }
+          if (journal['issn-type'] && journal['issn-type'].length > 0) {
+            result += `<strong>ISSN:</strong> ${journal['issn-type'].map(issn => issn.value).join(', ')}<br>`;
           }
           if (journal.license && journal.license.length > 0) {
-            result += `License: <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
+            result += `<strong>License:</strong> <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
           }
           
           return result || 'No additional information available';
-        } else {
-          return 'Journal not found in CrossRef';
         }
+      }
+      
+      // If ISSN search failed or we have a title, try title search
+      const response = await fetch(`https://api.crossref.org/journals?query=${encodeURIComponent(query)}&rows=5`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.status === 'ok' && data.message && data.message.items && data.message.items.length > 0) {
+        const journal = data.message.items[0];
+        let result = '';
+        
+        if (journal.title) {
+          result += `<strong>Title:</strong> ${journal.title}<br>`;
+        }
+        if (journal.publisher) {
+          result += `<strong>Publisher:</strong> ${journal.publisher}<br>`;
+        }
+        if (journal['issn-type'] && journal['issn-type'].length > 0) {
+          result += `<strong>ISSN:</strong> ${journal['issn-type'].map(issn => issn.value).join(', ')}<br>`;
+        }
+        if (journal.license && journal.license.length > 0) {
+          result += `<strong>License:</strong> <a href="${journal.license[0].URL}" target="_blank">${journal.license[0]['content-version'] || 'View license'}</a><br>`;
+        }
+        
+        return result || 'No additional information available';
       } else {
-        // Try title search as fallback
-        const response = await fetch(`https://api.crossref.org/works?query.title=${encodeURIComponent(query)}&rows=1`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const item = data.message.items[0];
-        
-        if (item) {
-          return `Sample DOI: ${item.DOI || 'N/A'} — Title: ${item.title?.[0] || 'N/A'}`;
-        }
-        
-        return 'No matching publications found in CrossRef';
+        return 'Journal not found in CrossRef';
       }
     } catch (error) {
       console.error('Error fetching CrossRef data:', error);
@@ -415,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const data = await response.json();
       if (data.hitCount && data.hitCount > 0) {
-        return `Approximately ${data.hitCount} articles from this journal indexed in Europe PMC (includes PubMed content)`;
+        return `Approximately ${data.hitCount.toLocaleString()} articles from this journal indexed in Europe PMC (includes PubMed content)`;
       } else {
         return 'No articles from this journal found in Europe PMC/PubMed';
       }
@@ -559,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
     resultsContainer.innerHTML = `
       <div class="report-header">
         <h3>Journal Credibility Report</h3>
-        <button id="copyReportBtn" class="btn-secondary">
+        <button id="copyReportBtn" class="copy-report-btn">
           <i class="fas fa-copy"></i> Copy Report
         </button>
       </div>
@@ -575,11 +612,15 @@ document.addEventListener('DOMContentLoaded', function() {
           <tr>
             <td class="info-label">Journal Title</td>
             <td>${escapeHtml(offlineHit.foundTitle)}</td>
-            <td rowspan="3"><span class="status-badge ${statusBadge}">${statusText}</span></td>
+            <td rowspan="4"><span class="status-badge ${statusBadge}">${statusText}</span></td>
           </tr>
           <tr>
             <td class="info-label">ISSN</td>
             <td>${escapeHtml(offlineHit.foundISSN)}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Publisher</td>
+            <td>${escapeHtml(offlineHit.foundPublisher)}</td>
           </tr>
           <tr>
             <td class="info-label">Found In</td>
