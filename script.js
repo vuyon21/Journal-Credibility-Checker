@@ -70,23 +70,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Display loading state with message
   function showLoading(msg) {
     resultsContainer.innerHTML = 
-      `<div class="loading">
-        <div class="spinner"></div>
-        <p>${msg}</p>
-        <p id="progressText">Loading...</p>
-      </div>`;
+      '<div class="loading">' +
+        '<div class="spinner"></div>' +
+        '<p>' + msg + '</p>' +
+        '<p id="progressText">Loading...</p>' +
+      '</div>';
   }
   
   // Display error message with retry option
   function showError(msg) {
     resultsContainer.innerHTML = 
-      `<div class="loading">
-        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger);"></i>
-        <p>${msg}</p>
-        <button id="tryAgainBtn" style="margin-top: 15px;">
-          <i class="fas fa-redo"></i> Try Again
-        </button>
-      </div>`;
+      '<div class="loading">' +
+        '<i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--danger);"></i>' +
+        '<p>' + msg + '</p>' +
+        '<button id="tryAgainBtn" style="margin-top: 15px;">' +
+          '<i class="fas fa-redo"></i> Try Again' +
+        '</button>' +
+      '</div>';
     
     document.getElementById('tryAgainBtn').addEventListener('click', function() {
       journalQuery.value = '';
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .trim();
   }
   
-  // Format ISSN with hyphen after 4th digit
+  // Format ISSN with hyphen after 4th digit for display
   function formatISSN(issn) {
     if (!issn || issn === '—') return '—';
     // Remove all non-numeric characters except X
@@ -585,16 +585,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (removedHit) {
       statusClass = 'status-danger';
-      statusText = 'Questionable (Removed)';
+      statusText = 'Not Recommended (Removed)';
     } else if (f.dhet || f.dhet2 || f.scopus || f.wos) {
       statusClass = 'status-verified';
-      statusText = 'Credible';
+      statusText = 'Recommended';
     } else if (f.doaj || f.ibss || f.scielo || f.norwegian) {
       statusClass = 'status-warning';
       statusText = 'Verify Manually';
     } else {
       statusClass = 'status-danger';
-      statusText = 'Questionable';
+      statusText = 'Not Recommended';
     }
     
     // Check for transformative agreements
