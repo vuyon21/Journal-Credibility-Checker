@@ -201,7 +201,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Get publisher from entry using various possible field names
   function getJournalPublisher(entry) {
     const possiblePublisherFields = [
-      'publisher', 'publisher name', 'publisher_name', 'publisher-name'
+      'publisher', 'publisher name', 'publisher_name', 'publisher-name',
+      'publisher information', 'publisher_info', 'publisher-info',
+      'published by', 'publishing company', 'publishing_company'
     ];
     
     for (const field of possiblePublisherFields) {
@@ -210,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    return '';
+    return '—';
   }
 
   // Load all CSV files from GitHub
@@ -308,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundISSN = issn;
           foundTitle = title;
           foundPublisher = publisher;
-          console.log(`Found by ISSN in ${key}:`, title);
+          console.log(`Found by ISSN in ${key}:`, title, 'Publisher:', publisher);
           break;
         }
         
@@ -319,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundISSN = issn;
           foundTitle = title;
           foundPublisher = publisher;
-          console.log(`Found by title in ${key}:`, title);
+          console.log(`Found by title in ${key}:`, title, 'Publisher:', publisher);
           break;
         }
         
@@ -330,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
           foundISSN = issn;
           foundTitle = title;
           foundPublisher = publisher;
-          console.log(`Found by partial title match in ${key}:`, title);
+          console.log(`Found by partial title match in ${key}:`, title, 'Publisher:', publisher);
           break;
         }
       }
@@ -514,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Copy to clipboard
     navigator.clipboard.writeText(reportText).then(() => {
       // Show confirmation
-      const copyBtn = document.getElementById('copyReportBtn');
+      const copyBtn = document.getElementById('copyReportTop');
       if (copyBtn) {
         const originalText = copyBtn.innerHTML;
         copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied to Clipboard!';
@@ -531,21 +533,21 @@ document.addEventListener('DOMContentLoaded', function() {
   // Display journal data and credibility assessment
   function displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
     // Determine credibility status
-    let statusBadge = '';
+    let statusClass = '';
     let statusText = '';
     const f = offlineHit.flags || {};
     
     if (removedHit) {
-      statusBadge = 'status-danger';
+      statusClass = 'status-danger';
       statusText = 'Not Recommended (Removed)';
     } else if (f.dhet || f.dhet2 || f.scopus || f.wos) {
-      statusBadge = 'status-verified';
+      statusClass = 'status-verified';
       statusText = 'Recommended';
     } else if (f.doaj || f.ibss || f.scielo || f.norwegian) {
-      statusBadge = 'status-warning';
+      statusClass = 'status-warning';
       statusText = 'Verify Manually';
     } else {
-      statusBadge = 'status-danger';
+      statusClass = 'status-danger';
       statusText = 'Not Recommended';
     }
     
@@ -594,25 +596,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Build results HTML
     resultsContainer.innerHTML = `
-      <div class="report-header">
-        <h3>Journal Credibility Report</h3>
-        <button id="copyReportBtn" class="copy-report-btn">
+      <div class="card-header">
+        <h3>Credibility Results</h3>
+        <button id="copyReportTop" class="copy-report-top">
           <i class="fas fa-copy"></i> Copy Report
         </button>
       </div>
+      
+      <div class="status-large ${statusClass}">${statusText}</div>
       
       <table class="report-table">
         <thead>
           <tr>
             <th colspan="2">Journal Information</th>
-            <th>Status</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="info-label">Journal Title</td>
             <td>${escapeHtml(offlineHit.foundTitle)}</td>
-            <td rowspan="4"><span class="status-badge ${statusBadge}">${statusText}</span></td>
           </tr>
           <tr>
             <td class="info-label">ISSN</td>
@@ -687,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     
     // Add event listener for the copy report button
-    document.getElementById('copyReportBtn').addEventListener('click', copyReportToClipboard);
+    document.getElementById('copyReportTop').addEventListener('click', copyReportToClipboard);
   }
 
   // Display removed journals list
