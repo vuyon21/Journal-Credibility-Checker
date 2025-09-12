@@ -585,16 +585,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (removedHit) {
       statusClass = 'status-danger';
-      statusText = 'Not Recommended (Removed)';
+      statusText = 'Questionable (Removed)';
     } else if (f.dhet || f.dhet2 || f.scopus || f.wos) {
       statusClass = 'status-verified';
-      statusText = 'Recommended';
+      statusText = 'Credible';
     } else if (f.doaj || f.ibss || f.scielo || f.norwegian) {
       statusClass = 'status-warning';
       statusText = 'Verify Manually';
     } else {
       statusClass = 'status-danger';
-      statusText = 'Not Recommended';
+      statusText = 'Questionable';
     }
     
     // Check for transformative agreements
