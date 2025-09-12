@@ -104,20 +104,19 @@ document.addEventListener('DOMContentLoaded', function() {
       .trim();
   }
   
-  // Format ISSN with hyphen after 4th digit for display
+  // Format ISSN to preserve original hyphenated format for display
   function formatISSN(issn) {
     if (!issn || issn === '—') return '—';
-    // Remove all non-numeric characters except X
-    const cleanIssn = issn.replace(/[^0-9X]/g, '');
-    // If we have exactly 8 digits, insert hyphen after 4th digit
-    if (cleanIssn.length === 8) {
-      return `${cleanIssn.slice(0, 4)}-${cleanIssn.slice(4)}`;
+    // Keep original format as-is from CSV — we don't normalize for display
+    // But ensure it's valid: 4 digits, hyphen, 3 digits + X
+    const clean = issn.replace(/[^0-9X]/g, '');
+    if (clean.length === 8) {
+      return `${clean.slice(0, 4)}-${clean.slice(4)}`;
     }
-    // Return original if not valid 8-digit format
-    return issn;
+    return issn; // Return unchanged if malformed
   }
   
-  // Normalize ISSN format (remove hyphens and other non-alphanumeric chars)
+  // Normalize ISSN for internal matching (remove hyphens and non-alphanumeric)
   function normalizeISSN(s) {
     if (!s) return '';
     return s.toString().toUpperCase().replace(/[^0-9X]/g, '');
@@ -270,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
           // Extract publisher from multiple possible fields
           const publisher = r.publisher || r['publisher name'] || r['publisher_name'] || r['publisher-name'] || r['published by'] || 'Unknown';
           
-          // Extract open access status from multiple possible fields
+          // Extract Open Access Status from multiple possible fields
           const openAccessStatus = r['open access status'] || r['Open Access Status'] || r['open_access_status'] || r['oa_status'] || 'Not specified';
           
           transformativeList.push({
@@ -327,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (issnQuery && issn && issn === issnQuery) {
           flags[key] = true;
           foundInList.push(key);
-          foundISSN = issn;
+          foundISSN = getJournalISSN(entry); // Preserve original format
           foundTitle = title;
           foundPublisher = publisher;
           console.log(`Found by ISSN in ${key}:`, title, 'Publisher:', publisher);
@@ -338,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (title && titleNorm === qNorm) {
           flags[key] = true;
           foundInList.push(key);
-          foundISSN = issn;
+          foundISSN = getJournalISSN(entry); // Preserve original format
           foundTitle = title;
           foundPublisher = publisher;
           console.log(`Found by title in ${key}:`, title, 'Publisher:', publisher);
@@ -349,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (title && titleNorm.includes(qNorm) && qNorm.length > 3) {
           flags[key] = true;
           foundInList.push(key);
-          foundISSN = issn;
+          foundISSN = getJournalISSN(entry); // Preserve original format
           foundTitle = title;
           foundPublisher = publisher;
           console.log(`Found by partial title match in ${key}:`, title, 'Publisher:', publisher);
@@ -364,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return { 
       flags, 
       foundIn, 
-      foundISSN: foundISSN || (isISSN(query) ? normalizeISSN(query) : '—'),
+      foundISSN: foundISSN || (isISSN(query) ? query : '—'), // Use original input if ISSN
       foundTitle: foundTitle || query,
       foundPublisher: foundPublisher || '—'
     };
@@ -576,31 +575,49 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Determine credibility status based on new rules
+  function determineCredibilityStatus(offlineHit, transformativeMatch) {
+    const dhetAccredited = offlineHit.flags.dhet || offlineHit.flags.dhet2;
+    const otherAccredited = offlineHit.flags.doaj || offlineHit.flags.ibss || offlineHit.flags.scielo || offlineHit.flags.norwegian || offlineHit.flags.scopus || offlineHit.flags.wos;
+    const isAccredited = dhetAccredited || otherAccredited;
+    
+    if (transformativeMatch && isAccredited) {
+      return { 
+        status: 'Credible & Recommended!', 
+        class: 'status-verified', 
+        message: 'Credible & Recommended!' 
+      };
+    } else if (transformativeMatch && !isAccredited) {
+      return { 
+        status: 'Verify with your Librarian!', 
+        class: 'status-warning', 
+        message: 'Verify with your Librarian!' 
+      };
+    } else if (isAccredited && !transformativeMatch) {
+      return { 
+        status: 'Credible & Recommended!', 
+        class: 'status-verified', 
+        message: 'Credible & Recommended!' 
+      };
+    } else if (!isAccredited && !transformativeMatch) {
+      return { 
+        status: 'Questionable: You have been warned!', 
+        class: 'status-questionable', 
+        message: 'Questionable: You have been warned!' 
+      };
+    } else {
+      return { 
+        status: 'Unknown', 
+        class: 'status-danger', 
+        message: 'Unclear status' 
+      };
+    }
+  }
+  
   // Display journal data and credibility assessment
   function displayJournalData(query, offlineHit, removedHit, crossrefInfo, pubmedInfo) {
-    // Determine credibility status
-    let statusClass = '';
-    let statusText = '';
-    const f = offlineHit.flags || {};
-    
-    if (removedHit) {
-      statusClass = 'status-danger';
-      statusText = 'Not Recommended (Removed)';
-    } else if (f.dhet || f.dhet2 || f.scopus || f.wos) {
-      statusClass = 'status-verified';
-      statusText = 'Recommended';
-    } else if (f.doaj || f.ibss || f.scielo || f.norwegian) {
-      statusClass = 'status-warning';
-      statusText = 'Verify Manually';
-    } else {
-      statusClass = 'status-danger';
-      statusText = 'Not Recommended';
-    }
-    
     // Check for transformative agreements
     let transformativeMatch = null;
-    let transformativeInfo = '<tr><td colspan="2">No transformative agreement found</td></tr>';
-    
     for (const t of transformativeList) {
       const tTitle = t.journalTitle || t.title || t['journal title'] || '';
       if (normalizeTitle(tTitle) === normalizeTitle(query)) {
@@ -609,6 +626,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
+    // Determine credibility status
+    const credibility = determineCredibilityStatus(offlineHit, transformativeMatch);
+    const statusClass = credibility.class;
+    const statusText = credibility.message;
+    
+    // Build transformative info section
+    let transformativeInfo = '<tr><td colspan="2">No transformative agreement found</td></tr>';
     if (transformativeMatch) {
       transformativeInfo = 
         `<tr>
@@ -687,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <tr>
             <td class="info-label">Listing/Indexing</td>
             <td>
-              ${Object.entries(f)
+              ${Object.entries(offlineHit.flags)
                 .filter(([key, value]) => value)
                 .map(([key]) => `<span class="accreditation-tag">${key.toUpperCase()}</span>`)
                 .join(' ') || 'Not found in any accredited lists'}
