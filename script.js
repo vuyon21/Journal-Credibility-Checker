@@ -22,14 +22,14 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Map short codes to full descriptions with acronyms in brackets
   const fullSourceNames = {
-    dhet: 'Department of Higher Education and Training (South African Journal List) (DHET)',
-    dhet2: 'Department of Higher Education and Training (South African Journal List) (DHET)',
+    dhet: 'Department of Higher Education and Training (South African Journal List / DHET)',
+    dhet2: 'Department of Higher Education and Training (South African Journal List / DHET)',
     doaj: 'Directory of Open Access Journals (DOAJ)',
     ibss: 'International Bibliography of the Social Sciences (IBSS)',
     norwegian: 'Norwegian Register for Scientific Journals, Series and Publishers (Norwegian)',
     scielo: 'Scientific Electronic Library Online – South Africa (SciELO SA)',
     scopus: 'Scopus (Elsevier\'s abstract and citation database) (Scopus)',
-    wos: 'Web of Science (Clarivate Analytics) (WOS)'
+    wos: 'Web of Science (Clarivate Analytics / WOS)'
   };
   
   const TRANSFORMATIVE_FILES = [
