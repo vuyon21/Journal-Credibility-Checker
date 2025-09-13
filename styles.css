@@ -26,40 +26,24 @@ body {
     background: linear-gradient(135deg, var(--primary) 0%, #002244 100%);
     color: white;
     padding: 1.2rem 2rem;
-    display: flex;
-    align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     position: relative;
 }
 
-.logo {
+.logo-container {
     display: flex;
     align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.logo {
+    height: 60px;
     margin-right: 20px;
 }
 
-.logo-img {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(145deg, var(--secondary), #ffdd55);
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    color: var(--primary);
-    font-weight: bold;
-    text-align: center;
-    font-size: 0.65rem;
-    line-height: 1.2;
-}
-
 .title {
-    text-align: center;
-    flex-grow: 1;
-    margin-right: 90px;
+    text-align: left;
 }
 
 .title h1 {
@@ -328,6 +312,20 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.accreditation-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.accreditation-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.accreditation-list li:last-child {
+    border-bottom: none;
+}
+
 .copy-report-btn {
     background: var(--secondary);
     color: var(--primary);
@@ -385,6 +383,21 @@ body {
     border-radius: 8px;
 }
 
+.removed-journal-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.removed-journal-section h4 {
+    color: var(--danger);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+}
+
 .footer {
     text-align: center;
     padding: 2rem;
@@ -395,18 +408,22 @@ body {
 
 @media (max-width: 768px) {
     .header {
+        padding: 1rem;
+    }
+    
+    .logo-container {
         flex-direction: column;
         text-align: center;
-        padding: 1rem;
     }
     
     .logo {
         margin-right: 0;
         margin-bottom: 15px;
+        height: 50px;
     }
     
     .title {
-        margin-right: 0;
+        text-align: center;
     }
     
     .title h1 {
