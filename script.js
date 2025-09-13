@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', function() {
     removed: 'JOURNALS REMOVED IN PAST YEARS.csv'
   };
   
+  // Map short codes to full descriptions
+  const fullSourceNames = {
+    dhet: 'Department of Higher Education and Training (South African Journal List)',
+    dhet2: 'Department of Higher Education and Training (South African Journal List)',
+    doaj: 'Directory of Open Access Journals',
+    ibss: 'International Bibliography of the Social Sciences',
+    norwegian: 'Norwegian Register for Scientific Journals, Series and Publishers',
+    scielo: 'Scientific Electronic Library Online – South Africa',
+    scopus: 'Scopus (Elsevier\'s abstract and citation database)',
+    wos: 'Web of Science (Clarivate Analytics)'
+  };
+  
   const TRANSFORMATIVE_FILES = [
     {file: 'WILEY_2025.csv', link: 'https://sanlic.ac.za/wiley/'},
     {file: 'The Company of Biologists_2025.csv', link: 'https://sanlic.ac.za/the-company-of-biologists/'},
@@ -123,9 +135,15 @@ document.addEventListener('DOMContentLoaded', function() {
     return RAW_BASE + encodeURIComponent(fname);
   }
 
-  function parseCSV(text) {
+  function parseCSV(text, filename) {
     if (!text) return [];
     text = text.replace(/^\uFEFF/, '');
+    
+    // Special handling for the removed journals file
+    if (filename === 'JOURNALS REMOVED IN PAST YEARS.csv') {
+      return parseRemovedJournals(text);
+    }
+    
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length === 0) return [];
     
@@ -146,6 +164,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     return rows;
+  }
+
+  // Special parser for the removed journals file
+  function parseRemovedJournals(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const result = [];
+    let currentSection = '';
+    let headers = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Check if this is a section header
+      if (line.startsWith('JOURNALS REMOVED IN')) {
+        currentSection = line;
+        continue;
+      }
+      
+      // Check if this is a column header line
+      if (line.includes('JOURNAL TITLE') && line.includes('EDITOR\'S DETAILS')) {
+        headers = ['journal_title', 'editor_details'];
+        continue;
+      }
+      
+      // Skip empty lines or lines that are just headers
+      if (!line || line === 'N/A' || line.includes('Previous title if applicable')) {
+        continue;
+      }
+      
+      // Process data lines
+      if (headers.length > 0 && line) {
+        // Simple split on multiple spaces (at least 4)
+        const parts = line.split(/\s{4,}/);
+        if (parts.length >= 2) {
+          result.push({
+            section: currentSection,
+            journal_title: parts[0].trim(),
+            editor_details: parts[1].trim()
+          });
+        } else if (parts.length === 1) {
+          result.push({
+            section: currentSection,
+            journal_title: parts[0].trim(),
+            editor_details: ''
+          });
+        }
+      }
+    }
+    
+    return result;
   }
 
   function getJournalTitle(entry) {
@@ -188,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const url = rawUrlFor(fname);
         const res = await fetchWithFallback(url);
         const text = await res.text();
-        journalLists[key] = parseCSV(text);
+        journalLists[key] = parseCSV(text, fname);
         loadedSuccessfully = true;
       } catch(e) {
         console.warn('Failed to load', fname, e);
@@ -204,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const url = rawUrlFor(t.file);
         const res = await fetchWithFallback(url);
         const text = await res.text();
-        const rows = parseCSV(text);
+        const rows = parseCSV(text, t.file);
         
         rows.forEach(r => {
           const publisher = getJournalPublisher(r);
@@ -284,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    const foundIn = foundInList.join(', ') || 'Not found in accredited lists';
+    const foundIn = foundInList.map(code => fullSourceNames[code] || code).join(', ') || 'Not found in accredited lists';
     
     return { 
       flags, 
@@ -299,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const qNorm = normalizeTitle(query);
     const removedList = journalLists.removed || [];
     for (const entry of removedList) {
-      if (normalizeTitle(getJournalTitle(entry)) === qNorm) return entry;
+      if (normalizeTitle(entry.journal_title || getJournalTitle(entry)) === qNorm) return entry;
     }
     return null;
   }
@@ -377,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const f = offlineHit.flags || {};
     const relevantLists = Object.entries(f)
       .filter(([_, v]) => v)
-      .map(([k]) => k.toUpperCase());
+      .map(([k]) => fullSourceNames[k] || k.toUpperCase());
     
     reportText += relevantLists.length 
       ? `Found in: ${relevantLists.join(', ')}\n` 
@@ -478,6 +546,15 @@ document.addEventListener('DOMContentLoaded', function() {
       transformativeMatch
     };
     
+    // Create list of accreditation sources with full names
+    const accreditationList = Object.entries(offlineHit.flags)
+      .filter(([_, v]) => v)
+      .map(([k]) => {
+        const fullName = fullSourceNames[k] || k.toUpperCase();
+        return `<li>${fullName}</li>`;
+      })
+      .join('');
+    
     resultsContainer.innerHTML = `
       <div class="card-header">
         <h3>Credibility Results</h3>
@@ -513,10 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <tr>
             <td class="info-label">Listing/Indexing</td>
             <td>
-              ${Object.entries(offlineHit.flags)
-                .filter(([_, v]) => v)
-                .map(([k]) => `<span class="accreditation-tag">${k.toUpperCase()}</span>`)
-                .join(' ') || 'Not found in any accredited lists'}
+              ${accreditationList ? `<ul class="accreditation-list">${accreditationList}</ul>` : 'Not found in any accredited lists'}
             </td>
           </tr>
           ${removedHit ? `
@@ -568,28 +642,25 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    const columns = Object.keys(removedList[0]).filter(col => 
-      removedList.some(item => item[col] && item[col].toString().trim())
-    );
-    
     resultsContainer.innerHTML = `
       <h3>Journals Removed from Accredited List</h3>
       <p>Showing ${removedList.length} journals removed from the accredited list in past years.</p>
       <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-        <table class="report-table">
-          <thead>
-            <tr>
-              ${columns.map(col => `<th>${col.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${removedList.map(journal => `
+        ${removedList.map(journal => `
+          <div class="removed-journal-section">
+            <h4>${escapeHtml(journal.section || 'Unknown Section')}</h4>
+            <table class="report-table">
               <tr>
-                ${columns.map(col => `<td>${escapeHtml(journal[col] || 'N/A')}</td>`).join('')}
+                <td class="info-label">Journal Title</td>
+                <td>${escapeHtml(journal.journal_title || 'N/A')}</td>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+              <tr>
+                <td class="info-label">Editor's Details</td>
+                <td>${escapeHtml(journal.editor_details || 'N/A')}</td>
+              </tr>
+            </table>
+          </div>
+        `).join('')}
       </div>
     `;
     
@@ -604,14 +675,9 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    const columns = Object.keys(removedList[0]).filter(col => 
-      removedList.some(item => item[col] && item[col].toString().trim())
-    );
-    
-    let csvContent = columns.join(',') + '\n';
+    let csvContent = "Section,Journal Title,Editor's Details\n";
     removedList.forEach(journal => {
-      const row = columns.map(col => `"${journal[col]?.toString().replace(/"/g, '""') || ''}"`).join(',');
-      csvContent += row + '\n';
+      csvContent += `"${journal.section || ''}","${journal.journal_title || ''}","${journal.editor_details || ''}"\n`;
     });
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
