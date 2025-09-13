@@ -202,7 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     const result = [];
     let currentSection = '';
-    let headers = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -213,20 +212,14 @@ document.addEventListener('DOMContentLoaded', function() {
         continue;
       }
       
-      // Check if this is a column header line
-      if (line.includes('JOURNAL TITLE') && line.includes('EDITOR\'S DETAILS')) {
-        headers = ['journal_title', 'editor_details'];
-        continue;
-      }
-      
       // Skip empty lines or lines that are just headers
-      if (!line || line === 'N/A' || line.includes('Previous title if applicable')) {
+      if (!line || line === 'N/A' || line.includes('Previous title if applicable') || 
+          line.includes('JOURNAL TITLE') || line.includes('EDITOR\'S DETAILS')) {
         continue;
       }
       
-      // Process data lines
-      if (headers.length > 0 && line) {
-        // Simple split on multiple spaces (at least 4)
+      // Process data lines - split on multiple spaces (at least 4)
+      if (line) {
         const parts = line.split(/\s{4,}/);
         if (parts.length >= 2) {
           result.push({
@@ -648,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <thead>
           <tr>
             <th colspan="2">Live Lookup Results</th>
-          </tr>
+            </tr>
         </thead>
         <tbody>
           <tr>
@@ -673,27 +666,63 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
+    // Group journals by section
+    const journalsBySection = {};
+    removedList.forEach(journal => {
+      const section = journal.section || 'Unknown Section';
+      if (!journalsBySection[section]) {
+        journalsBySection[section] = [];
+      }
+      journalsBySection[section].push(journal);
+    });
+    
     resultsContainer.innerHTML = `
       <h3>Journals Removed from Accredited List</h3>
       <p>Showing ${removedList.length} journals removed from the accredited list in past years.</p>
-      <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-        ${removedList.map(journal => `
+      
+      <div class="removed-table-controls">
+        <button id="scrollToTopBtn"><i class="fas fa-arrow-up"></i> Scroll to Top</button>
+        <span class="table-info">${removedList.length} journals found</span>
+        <button id="scrollToBottomBtn"><i class="fas fa-arrow-down"></i> Scroll to Bottom</button>
+      </div>
+      
+      <div class="removed-table-wrapper">
+        ${Object.entries(journalsBySection).map(([section, journals]) => `
           <div class="removed-journal-section">
-            <h4>${escapeHtml(journal.section || 'Unknown Section')}</h4>
-            <table class="report-table">
-              <tr>
-                <td class="info-label">Journal Title</td>
-                <td>${escapeHtml(journal.journal_title || 'N/A')}</td>
-              </tr>
-              <tr>
-                <td class="info-label">Editor's Details</td>
-                <td>${escapeHtml(journal.editor_details || 'N/A')}</td>
-              </tr>
+            <h4>${escapeHtml(section)}</h4>
+            <table class="removed-table">
+              <thead>
+                <tr>
+                  <th>Journal Title</th>
+                  <th>Editor's Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${journals.map(journal => `
+                  <tr>
+                    <td>${escapeHtml(journal.journal_title || 'N/A')}</td>
+                    <td>${escapeHtml(journal.editor_details || 'N/A')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
             </table>
           </div>
         `).join('')}
       </div>
     `;
+    
+    // Add scroll functionality
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+    const tableWrapper = document.querySelector('.removed-table-wrapper');
+    
+    scrollToTopBtn.addEventListener('click', () => {
+      tableWrapper.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    scrollToBottomBtn.addEventListener('click', () => {
+      tableWrapper.scrollTo({ top: tableWrapper.scrollHeight, behavior: 'smooth' });
+    });
     
     showRemovedBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Removed from Accredited List';
     isRemovedVisible = true;
