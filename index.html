@@ -8,46 +8,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <img src="https://www.ufs.ac.za/templates/ufs2019/images/logo.png" alt="University of the Free State Logo" class="logo">
-            <div class="title">
-                <h1>UFS Journal Credibility Checker</h1>
-                <p>Verify the credibility of academic journals with our comprehensive tool</p>
+    <div class="page-container">
+        <header class="header">
+            <div class="header-content">
+                <img src="https://www.ufs.ac.za/templates/ufs2019/images/logo.png" alt="University of the Free State Logo" class="logo">
+                <div class="title">
+                    <h1>UFS Journal Credibility Checker</h1>
+                    <p>Verify the credibility of academic journals with our comprehensive tool</p>
+                </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <div class="container">
-        <div class="card">
-            <h2>Check Journal Credibility</h2>
-            <div class="search-box">
-                <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN">
-                <button id="searchBtn"><i class="fas fa-search"></i> Check Credibility</button>
+        <div class="container">
+            <div class="card">
+                <h2>Check Journal Credibility</h2>
+                <div class="search-box">
+                    <input type="text" id="journalQuery" placeholder="Enter journal title or ISSN">
+                    <button id="searchBtn"><i class="fas fa-search"></i> Check Credibility</button>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="showRemovedBtn"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
+                    <button class="action-btn" id="copyRemovedBtn"><i class="fas fa-copy"></i> Copy Removed List</button>
+                </div>
+                <p>Your trusted journal credibility checker - using DHET-Accredited Lists, Transformative Agreements, and live lookups from CrossRef & PubMed.</p>
             </div>
-            <div class="action-buttons">
-                <button class="action-btn" id="showRemovedBtn"><i class="fas fa-eye"></i> Show Removed from Accredited List</button>
-                <button class="action-btn" id="copyRemovedBtn"><i class="fas fa-copy"></i> Copy Removed List</button>
-            </div>
-            <p>Your trusted journal credibility checker - using DHET-Accredited Lists, Transformative Agreements, and live lookups from CrossRef & PubMed.</p>
-        </div>
 
-        <div class="card">
-            <h2>Credibility Results</h2>
-            <div class="results" id="resultsContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading journal lists...</p>
-                    <p id="progressText"></p>
+            <div class="card">
+                <h2>Credibility Results</h2>
+                <div class="results" id="resultsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading journal lists...</p>
+                        <p id="progressText"></p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <footer class="footer">
-        <p>© 2025 - UFS - Journal Credibility Checker</p>
-        <p>This tool is designed to assist researchers in evaluating journal credibility. Always conduct additional research before submitting.</p>
-    </footer>
+        <footer class="footer">
+            <p>© 2025 - UFS - Journal Credibility Checker</p>
+            <p>This tool is designed to assist researchers in evaluating journal credibility. Always conduct additional research before submitting.</p>
+        </footer>
+    </div>
 
     <script src="script.js"></script>
 </body>
