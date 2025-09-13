@@ -147,6 +147,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length === 0) return [];
     
+    // Special handling for Scopus CSV format
+    if (filename === 'SCOPUS_2025.csv') {
+      return parseScopusCSV(lines);
+    }
+    
     const headerLine = lines[0];
     const commaCount = (headerLine.match(/,/g) || []).length;
     const pipeCount = (headerLine.match(/\|/g) || []).length;
@@ -160,6 +165,32 @@ document.addEventListener('DOMContentLoaded', function() {
       const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
       const obj = {};
       headers.forEach((h, j) => obj[h] = parts[j] || '');
+      if (Object.values(obj).some(v => v)) rows.push(obj);
+    }
+    
+    return rows;
+  }
+
+  // Special parser for Scopus CSV format (tab-separated with specific headers)
+  function parseScopusCSV(lines) {
+    if (lines.length < 2) return [];
+    
+    // Extract headers from first line
+    const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+    const rows = [];
+    
+    // Process each line
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
+      const parts = line.split('\t').map(p => p.trim().replace(/^"|"$/g, ''));
+      const obj = {};
+      
+      headers.forEach((h, j) => {
+        obj[h] = parts[j] || '';
+      });
+      
       if (Object.values(obj).some(v => v)) rows.push(obj);
     }
     
@@ -613,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ${transformativeInfo}
         </tbody>
       </table>
-      <table class="report-table'>
+      <table class="report-table">
         <thead>
           <tr>
             <th colspan="2">Live Lookup Results</th>
@@ -714,7 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       showError('An error occurred during the search. Please try again.');
     }
-  };
+  });
 
   showRemovedBtn.addEventListener('click', () => {
     if (isRemovedVisible) {
