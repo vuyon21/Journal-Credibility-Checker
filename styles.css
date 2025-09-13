@@ -45,9 +45,16 @@ body {
     align-items: center;
 }
 
+.logo-container {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
 .logo {
     height: 60px;
-    margin-right: 20px;
+    width: auto;
+    object-fit: contain;
 }
 
 .title {
@@ -67,6 +74,7 @@ body {
     opacity: 0.9;
 }
 
+/* Rest of the CSS remains the same as previous version */
 .container {
     max-width: 1200px;
     margin: 2rem auto;
@@ -459,9 +467,13 @@ body {
         text-align: center;
     }
     
-    .logo {
+    .logo-container {
         margin-right: 0;
         margin-bottom: 15px;
+        justify-content: center;
+    }
+    
+    .logo {
         height: 50px;
     }
     
