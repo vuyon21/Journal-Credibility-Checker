@@ -20,16 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
     removed: 'JOURNALS REMOVED IN PAST YEARS.csv'
   };
   
-  // Map short codes to full descriptions
+  // Map short codes to full descriptions with acronyms in brackets
   const fullSourceNames = {
-    dhet: 'Department of Higher Education and Training (South African Journal List)',
-    dhet2: 'Department of Higher Education and Training (South African Journal List)',
-    doaj: 'Directory of Open Access Journals',
-    ibss: 'International Bibliography of the Social Sciences',
-    norwegian: 'Norwegian Register for Scientific Journals, Series and Publishers',
-    scielo: 'Scientific Electronic Library Online – South Africa',
-    scopus: 'Scopus (Elsevier\'s abstract and citation database)',
-    wos: 'Web of Science (Clarivate Analytics)'
+    dhet: 'Department of Higher Education and Training (South African Journal List) (DHET)',
+    dhet2: 'Department of Higher Education and Training (South African Journal List) (DHET)',
+    doaj: 'Directory of Open Access Journals (DOAJ)',
+    ibss: 'International Bibliography of the Social Sciences (IBSS)',
+    norwegian: 'Norwegian Register for Scientific Journals, Series and Publishers (Norwegian)',
+    scielo: 'Scientific Electronic Library Online – South Africa (SciELO SA)',
+    scopus: 'Scopus (Elsevier\'s abstract and citation database) (Scopus)',
+    wos: 'Web of Science (Clarivate Analytics) (WOS)'
   };
   
   const TRANSFORMATIVE_FILES = [
@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
       transformativeMatch
     };
     
-    // Create list of accreditation sources with full names
+    // Create list of accreditation sources with full names and acronyms
     const accreditationList = Object.entries(offlineHit.flags)
       .filter(([_, v]) => v)
       .map(([k]) => {
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ${transformativeInfo}
         </tbody>
       </table>
-      <table class="report-table">
+      <table class="report-table'>
         <thead>
           <tr>
             <th colspan="2">Live Lookup Results</th>
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       showError('An error occurred during the search. Please try again.');
     }
-  });
+  };
 
   showRemovedBtn.addEventListener('click', () => {
     if (isRemovedVisible) {
