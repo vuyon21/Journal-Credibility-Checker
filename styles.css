@@ -43,12 +43,13 @@ body {
     margin: 0 auto;
     display: flex;
     align-items: center;
+    justify-content: flex-start; /* Align items to the left */
 }
 
 .logo-container {
     display: flex;
     align-items: center;
-    margin-right: 20px;
+    margin-right: 30px; /* Increased spacing between logo and title */
 }
 
 .logo {
@@ -59,6 +60,7 @@ body {
 
 .title {
     text-align: left;
+    flex-grow: 1; /* Allow title to take remaining space */
 }
 
 .title h1 {
@@ -74,7 +76,7 @@ body {
     opacity: 0.9;
 }
 
-/* Rest of the CSS remains the same as previous version */
+/* Rest of the CSS remains the same */
 .container {
     max-width: 1200px;
     margin: 2rem auto;
