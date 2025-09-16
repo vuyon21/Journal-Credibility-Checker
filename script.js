@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusClass = credibility.class;
     const statusText = credibility.message;
     
-    let transformativeInfo = '<tr><td colspan="2">No transformative agreement found</td></tr>';
+    let transformativeInfo = '<tr><td colspan="2">Not covered under current SANLiC agreements</td></tr>';
     if (transformativeMatch) {
       transformativeInfo = `
         <tr>
