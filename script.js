@@ -649,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td><div class="live-info">${crossrefInfo}</div></td>
           </tr>
           <tr>
-            <td class="info-label">PubMed Information</td>
+            <td class="info-label">Europe PMC Information</td>
             <td><div class="live-info">${pubmedInfo}</div></td>
           </tr>
         </tbody>
